@@ -20,48 +20,41 @@
 
 #include "DQMServices/Core/interface/DQMStore.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
-#include "DQMServices/Core/interface/MonitorElement.h"
 
-#include <DQMServices/Core/interface/DQMEDAnalyzer.h>
+#include <DQMServices/Core/interface/oneDQMEDAnalyzer.h>
 
 #include <FWCore/Framework/interface/LuminosityBlock.h>
 
 #include <vector>
 
 class DTGeometry;
-class DQMStore;
-class MonitorElement;
 class DTHVStatus;
 
-class DTDCSByLumiTask: public DQMEDAnalyzer{
-
+class DTDCSByLumiTask : public one::DQMEDAnalyzer<one::DQMLuminosityBlockElements> {
 public:
-
   /// Constructor
   DTDCSByLumiTask(const edm::ParameterSet& ps);
 
   /// Destructor
-  virtual ~DTDCSByLumiTask();
+  ~DTDCSByLumiTask() override;
 
 protected:
-
   /// Begin Run
-  void dqmBeginRun(const edm::Run&, const edm::EventSetup&);
+  void dqmBeginRun(const edm::Run&, const edm::EventSetup&) override;
 
   // Book the histograms
-  void bookHistograms(DQMStore::IBooker &, edm::Run const &, edm::EventSetup const &) override;
+  void bookHistograms(DQMStore::IBooker&, edm::Run const&, edm::EventSetup const&) override;
 
   /// By Lumi DCS DB Operation
-  void beginLuminosityBlock(edm::LuminosityBlock const& lumiSeg, edm::EventSetup const& context) ;
+  void beginLuminosityBlock(edm::LuminosityBlock const& lumiSeg, edm::EventSetup const& context) override;
 
   /// By Lumi DCS DB Operation
-  void endLuminosityBlock(const edm::LuminosityBlock& lumiSeg, const edm::EventSetup& setup);
+  void endLuminosityBlock(const edm::LuminosityBlock& lumiSeg, const edm::EventSetup& setup) override;
 
   /// Analyze
-  void analyze(const edm::Event& e, const edm::EventSetup& c);
+  void analyze(const edm::Event& e, const edm::EventSetup& c) override;
 
 private:
-
   std::string topFolder() const;
 
   int theEvents;
@@ -74,7 +67,6 @@ private:
   edm::ESHandle<DTHVStatus> hvStatus;
 
   std::vector<MonitorElement*> hActiveUnits;
-
 };
 
 #endif

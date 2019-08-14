@@ -1,6 +1,7 @@
+from __future__ import absolute_import
 import unittest
 
-from PhysicsTools.HeppyCore.statistics.average import Average
+from .average import Average
 
 class AverageTestCase(unittest.TestCase):
 

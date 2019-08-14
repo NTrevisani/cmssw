@@ -24,6 +24,7 @@
 <use   name="Geometry/CaloGeometry"/>
 <use   name="Geometry/CSCGeometry"/>
 <use   name="Geometry/CSCGeometryBuilder"/>
+<use   name="Geometry/HcalTowerAlgo"/>
 <use   name="DataFormats/TrackReco"/>
 <use   name="DataFormats/Common"/>
 <use   name="DataFormats/Math"/>
@@ -43,4 +44,5 @@
 <use   name="RecoMuon/TrackingTools"/>
 <use   name="CommonTools/RecoAlgos"/> 
 <use   name="JetMETCorrections/Objects"/>
+<use   name="JetMETCorrections/JetCorrector"/>
 <flags   EDM_PLUGIN="1"/>

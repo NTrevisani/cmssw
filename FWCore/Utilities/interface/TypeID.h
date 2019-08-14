@@ -21,15 +21,12 @@ namespace edm {
 
   class TypeID : private TypeIDBase {
   public:
-
     TypeID() : TypeIDBase() {}
 
-    explicit TypeID(std::type_info const& t) : TypeIDBase(t) {
-    }
+    explicit TypeID(std::type_info const& t) : TypeIDBase(t) {}
 
     template <typename T>
-    explicit TypeID(T const& t) : TypeIDBase(typeid(t)) {
-    }
+    explicit TypeID(T const& t) : TypeIDBase(typeid(t)) {}
 
     // Print out the name of the type, using the dictionary class name.
     void print(std::ostream& os) const;
@@ -40,30 +37,23 @@ namespace edm {
 
     std::string friendlyClassName() const;
 
-#ifndef __GCCXML__
     explicit operator bool() const;
-#endif
-    
+
     using TypeIDBase::name;
 
     bool operator<(TypeID const& b) const { return this->TypeIDBase::operator<(b); }
 
-    bool operator==(TypeID const& b) const {return this->TypeIDBase::operator==(b);}
+    bool operator==(TypeID const& b) const { return this->TypeIDBase::operator==(b); }
 
     using TypeIDBase::typeInfo;
 
   private:
-
   };
 
-  inline bool operator>(TypeID const& a, TypeID const& b) {
-    return b < a;
-  }
+  inline bool operator>(TypeID const& a, TypeID const& b) { return b < a; }
 
-  inline bool operator!=(TypeID const& a, TypeID const& b) {
-    return !(a == b);
-  }
+  inline bool operator!=(TypeID const& a, TypeID const& b) { return !(a == b); }
 
   std::ostream& operator<<(std::ostream& os, TypeID const& id);
-}
+}  // namespace edm
 #endif

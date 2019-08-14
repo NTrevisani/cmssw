@@ -5,13 +5,12 @@
 #include <list>
 #include <map>
 #include <utility>
-#include <boost/regex.hpp>
-#include <xercesc/dom/DOM.hpp>
+#include <regex>
+#include "tinyxml2.h"
 
 namespace edm {
 
   class FileLocator {
-
   public:
     explicit FileLocator(std::string const& catUrl, bool fallback);
     ~FileLocator();
@@ -26,8 +25,8 @@ namespace edm {
     static int s_numberOfInstances;
 
     struct Rule {
-      boost::regex pathMatch;
-      boost::regex destinationMatch;
+      std::regex pathMatch;
+      std::regex destinationMatch;
       std::string result;
       std::string chain;
     };
@@ -37,8 +36,7 @@ namespace edm {
 
     void init(std::string const& catUrl, bool fallback);
 
-    void parseRule(xercesc::DOMNode* ruleNode,
-                   ProtocolRules& rules);
+    void parseRule(tinyxml2::XMLElement* ruleNode, ProtocolRules& rules);
 
     std::string applyRules(ProtocolRules const& protocolRules,
                            std::string const& protocol,
@@ -53,11 +51,11 @@ namespace edm {
     /** Inverse rules are used to do the mapping from PFN to LFN*/
     ProtocolRules m_inverseRules;
 
-    std::string                 m_fileType;
-    std::string                 m_filename;
-    std::vector<std::string>    m_protocols;
-    std::string                 m_destination;
+    std::string m_fileType;
+    std::string m_filename;
+    std::vector<std::string> m_protocols;
+    std::string m_destination;
   };
-}
+}  // namespace edm
 
-#endif //  FWCore_Catalog_FileLocator_h
+#endif  //  FWCore_Catalog_FileLocator_h

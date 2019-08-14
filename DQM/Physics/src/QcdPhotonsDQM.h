@@ -17,33 +17,27 @@
 #include "DataFormats/EgammaCandidates/interface/PhotonFwd.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "DQMServices/Core/interface/DQMEDAnalyzer.h"
+#include "DQMServices/Core/interface/DQMStore.h"
 
 namespace reco {
-class Jet;
+  class Jet;
 }
 
-class DQMStore;
-class MonitorElement;
-
 class QcdPhotonsDQM : public DQMEDAnalyzer {
- public:
+public:
   /// Constructor
   QcdPhotonsDQM(const edm::ParameterSet&);
 
   /// Destructor
-  virtual ~QcdPhotonsDQM();
+  ~QcdPhotonsDQM() override;
 
   //Book histograms
-  void bookHistograms(DQMStore::IBooker &,
-    edm::Run const &, edm::EventSetup const &) override;
+  void bookHistograms(DQMStore::IBooker&, edm::Run const&, edm::EventSetup const&) override;
 
   /// Get the analysis
-  void analyze(const edm::Event&, const edm::EventSetup&);
+  void analyze(const edm::Event&, const edm::EventSetup&) override;
 
-  // Divide histograms
-  void endRun(const edm::Run&, const edm::EventSetup&);
-
- private:
+private:
   // ----------member data ---------------------------
 
   // Switch for verbosity
@@ -69,8 +63,6 @@ class QcdPhotonsDQM : public DQMEDAnalyzer {
   edm::EDGetTokenT<EcalRecHitCollection> theBarrelRecHitToken_;
   edm::EDGetTokenT<EcalRecHitCollection> theEndcapRecHitToken_;
 
-  int num_events_in_run;
-
   // Histograms
   MonitorElement* h_triggers_passed;
   MonitorElement* h_photon_et_beforeCuts;
@@ -95,13 +87,6 @@ class QcdPhotonsDQM : public DQMEDAnalyzer {
   MonitorElement* h_photon_et_jetco;
   MonitorElement* h_photon_et_jetfs;
   MonitorElement* h_photon_et_jetfo;
-
-  MonitorElement* h_photon_et_ratio_co_cs;
-  MonitorElement* h_photon_et_ratio_fo_fs;
-  MonitorElement* h_photon_et_ratio_cs_fs;
-  MonitorElement* h_photon_et_ratio_co_fs;
-  MonitorElement* h_photon_et_ratio_cs_fo;
-  MonitorElement* h_photon_et_ratio_co_fo;
 };
 #endif
 

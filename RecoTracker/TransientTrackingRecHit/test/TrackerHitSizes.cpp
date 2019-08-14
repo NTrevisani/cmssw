@@ -8,11 +8,12 @@
 //
 // For FAMOS
 //
-#include "TrackingTools/TransientTrackingRecHit/interface/GenericTransientTrackingRecHit.h"  
-#include "DataFormats/TrackerRecHit2D/interface/SiTrackerGSRecHit2D.h"                         
-#include "DataFormats/TrackerRecHit2D/interface/SiTrackerGSMatchedRecHit2D.h"
+#include "TrackingTools/TransientTrackingRecHit/interface/GenericTransientTrackingRecHit.h"
+#include "DataFormats/TrackerRecHit2D/interface/FastTrackerRecHit.h"
+#include "DataFormats/TrackerRecHit2D/interface/FastMatchedTrackerRecHit.h"
+#include "DataFormats/TrackerRecHit2D/interface/FastProjectedTrackerRecHit.h"
 
-#include<iostream>
+#include <iostream>
 
 #define PSIZE(CNAME) std::cout << #CNAME << ": " << sizeof(CNAME) << std::endl
 
@@ -28,10 +29,10 @@ int main() {
 
   PSIZE(GenericTransientTrackingRecHit);
 
-  PSIZE(SiTrackerGSRecHit2D);
-  PSIZE(SiTrackerGSMatchedRecHit2D);
-
-
+  PSIZE(FastTrackerRecHit);
+  PSIZE(FastSingleTrackerRecHit);
+  PSIZE(FastMatchedTrackerRecHit);
+  PSIZE(FastProjectedTrackerRecHit);
 
   return 0;
 }

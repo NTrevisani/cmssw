@@ -2,7 +2,7 @@
 //
 // Package:    EgammaElectronAlgos
 // Class:      FTSFromVertexToPointFactory
-// 
+//
 /**\class FTSFromVertexToPointFactory EgammaElectronAlgos/FTSFromVertexToPointFactory
 
  Description: Utility class to create FTS from supercluster
@@ -18,35 +18,35 @@
 #include "RecoEgamma/EgammaElectronAlgos/interface/FTSFromVertexToPointFactory.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
 
-
-FreeTrajectoryState FTSFromVertexToPointFactory::get( MagneticField const & magField, 
-                                                      GlobalPoint const & xmeas, 
-                                                      GlobalPoint const & xvert, 
-                                                      float momentum, 
-                                                      TrackCharge charge )
-{
-  double BInTesla = magField.inTesla(xmeas).z();
+FreeTrajectoryState FTSFromVertexToPointFactory::get(MagneticField const& magField,
+                                                     GlobalPoint const& xmeas,
+                                                     GlobalPoint const& xvert,
+                                                     float momentum,
+                                                     TrackCharge charge) {
+  auto magFieldAtPoint = magField.inTesla(xmeas);
+  auto BInTesla = magFieldAtPoint.z();
   GlobalVector xdiff = xmeas - xvert;
-  double theta = xdiff.theta();
-  double phi= xdiff.phi();
-  double pt = momentum*sin(theta);
-  double pz = momentum*cos(theta);
-  double pxOld = pt*cos(phi);
-  double pyOld = pt*sin(phi);
+  auto mom = momentum * xdiff.unit();
+  auto pt = mom.perp();
+  auto pz = mom.z();
+  auto pxOld = mom.x();
+  auto pyOld = mom.y();
 
-  double RadCurv = 100*pt/(BInTesla*0.29979);
-  double alpha = asin(0.5*xdiff.perp()/RadCurv);
+  auto curv = (BInTesla * 0.29979f * 0.01f) / pt;
 
-  float ca = cos(charge*alpha);
-  float sa = sin(charge*alpha);
-  double pxNew =   ca*pxOld + sa*pyOld;
-  double pyNew =  -sa*pxOld + ca*pyOld;
-  GlobalVector pNew(pxNew, pyNew, pz);  
+  // stays as doc...
+  // auto alpha = std::asin(0.5f*xdiff.perp()*curv);
+  // auto ca = std::cos(float(charge)*alpha);
+  // auto sa = std::sin(float(charge)*alpha);
 
-  GlobalTrajectoryParameters gp(xmeas, pNew, charge, & magField);
-  
-  AlgebraicSymMatrix55 C = AlgebraicMatrixID();
-  FreeTrajectoryState VertexToPoint(gp,CurvilinearTrajectoryError(C));
+  auto sa = 0.5f * xdiff.perp() * curv * float(charge);
+  auto ca = sqrt(1.f - sa * sa);
 
-  return VertexToPoint;
+  auto pxNew = ca * pxOld + sa * pyOld;
+  auto pyNew = -sa * pxOld + ca * pyOld;
+  GlobalVector pNew(pxNew, pyNew, pz);
+
+  GlobalTrajectoryParameters gp(xmeas, pNew, charge, &magField, std::move(magFieldAtPoint));
+
+  return FreeTrajectoryState(gp);
 }

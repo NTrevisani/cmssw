@@ -9,10 +9,11 @@
 
 namespace edm {
   class ProductID;
-  class RefHolderBase;
 
   namespace reftobase {
-    template<typename T> class BaseVectorHolder;
+    class RefHolderBase;
+    template <typename T>
+    class BaseVectorHolder;
     class RefVectorHolderBase;
 
     //------------------------------------------------------------------
@@ -53,20 +54,18 @@ namespace edm {
       // 'fillme', set the Ref in 'fillme' equal to mine and return
       // true. If not, write the name of the type I really contain to
       // msg, and return false.
-      virtual bool fillRefIfMyTypeMatches(RefHolderBase& fillme,
-                                          std::string& msg) const = 0;
-      virtual std::auto_ptr<RefHolderBase> holder() const = 0;
+      virtual bool fillRefIfMyTypeMatches(RefHolderBase& fillme, std::string& msg) const = 0;
+      virtual std::unique_ptr<RefHolderBase> holder() const = 0;
 
-      virtual std::auto_ptr<BaseVectorHolder<T> > makeVectorHolder() const = 0;
-      virtual std::auto_ptr<RefVectorHolderBase> makeVectorBaseHolder() const = 0;
+      virtual std::unique_ptr<BaseVectorHolder<T> > makeVectorHolder() const = 0;
 
       virtual EDProductGetter const* productGetter() const = 0;
-      virtual bool hasProductCache() const = 0;
-      virtual void const* product() const = 0;
 
       /// Checks if product collection is in memory or available
       /// in the Event. No type checking is done.
       virtual bool isAvailable() const = 0;
+
+      virtual bool isTransient() const = 0;
 
       //Used by ROOT storage
       CMS_CLASS_VERSION(10)
@@ -84,8 +83,7 @@ namespace edm {
     //------------------------------------------------------------------
 
     template <typename T>
-    BaseHolder<T>::BaseHolder() {
-    }
+    BaseHolder<T>::BaseHolder() {}
 
     template <typename T>
     BaseHolder<T>::BaseHolder(BaseHolder const& /*other*/) {
@@ -93,8 +91,7 @@ namespace edm {
     }
 
     template <typename T>
-    BaseHolder<T>&
-    BaseHolder<T>::operator=(BaseHolder<T> const& /*other*/) {
+    BaseHolder<T>& BaseHolder<T>::operator=(BaseHolder<T> const& /*other*/) {
       // No data to assign.
       return *this;
     }
@@ -105,19 +102,16 @@ namespace edm {
     }
 
     template <typename T>
-    void
-    BaseHolder<T>::swap(BaseHolder<T>& /*other*/) {
+    void BaseHolder<T>::swap(BaseHolder<T>& /*other*/) {
       // nothing to do.
     }
 
     // Free swap function
     template <typename T>
-    inline
-    void
-    swap(BaseHolder<T>& lhs, BaseHolder<T>& rhs) {
+    inline void swap(BaseHolder<T>& lhs, BaseHolder<T>& rhs) {
       lhs.swap(rhs);
     }
-  }
-}
+  }  // namespace reftobase
+}  // namespace edm
 
 #endif

@@ -1,7 +1,6 @@
 #ifndef RecoParticleFlow_PFClusterProducer_PFRecHitQTestBase_h
 #define RecoParticleFlow_PFClusterProducer_PFRecHitQTestBase_h
 
-
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/Event.h"
@@ -22,6 +21,7 @@
 #include "DataFormats/HcalRecHit/interface/HORecHit.h"
 #include "DataFormats/HcalRecHit/interface/HBHERecHit.h"
 #include "DataFormats/CaloTowers/interface/CaloTowerCollection.h"
+#include "DataFormats/HGCRecHit/interface/HGCRecHit.h"
 #include "CondFormats/HcalObjects/interface/HcalChannelQuality.h"
 #include "CondFormats/DataRecord/interface/HcalChannelQualityRcd.h"
 #include "DataFormats/METReco/interface/HcalCaloFlagLabels.h"
@@ -29,20 +29,20 @@
 #include "RecoLocalCalo/HcalRecAlgos/interface/HcalSeverityLevelComputerRcd.h"
 
 class PFRecHitQTestBase {
- public:
-  PFRecHitQTestBase() {}
+public:
+  PFRecHitQTestBase() = default;
   PFRecHitQTestBase(const edm::ParameterSet& iConfig) {}
+  virtual ~PFRecHitQTestBase() = default;
 
-  virtual void beginEvent(const edm::Event&,const edm::EventSetup&)=0;
+  virtual void beginEvent(const edm::Event&, const edm::EventSetup&) = 0;
 
-
-  virtual bool test( reco::PFRecHit& ,const EcalRecHit&,bool&)=0;
-  virtual bool test( reco::PFRecHit& ,const HBHERecHit&,bool&)=0;
-  virtual bool test( reco::PFRecHit& ,const HFRecHit&,bool&)=0;
-  virtual bool test( reco::PFRecHit& ,const HORecHit&,bool&)=0;
-  virtual bool test( reco::PFRecHit& ,const CaloTower&,bool&)=0;
+  virtual bool test(reco::PFRecHit&, const EcalRecHit&, bool&, bool) = 0;
+  virtual bool test(reco::PFRecHit&, const HBHERecHit&, bool&) = 0;
+  virtual bool test(reco::PFRecHit&, const HFRecHit&, bool&) = 0;
+  virtual bool test(reco::PFRecHit&, const HORecHit&, bool&) = 0;
+  virtual bool test(reco::PFRecHit&, const CaloTower&, bool&) = 0;
+  virtual bool test(reco::PFRecHit&, const HGCRecHit&, bool&) = 0;
 };
- 
 
 #include "FWCore/PluginManager/interface/PluginFactory.h"
 typedef edmplugin::PluginFactory<PFRecHitQTestBase*(const edm::ParameterSet&)> PFRecHitQTestFactory;

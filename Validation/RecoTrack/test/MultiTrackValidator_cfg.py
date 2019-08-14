@@ -20,7 +20,7 @@ process.Timing = cms.Service("Timing"
 
 # source
 readFiles = cms.untracked.vstring()
-secFiles = cms.untracked.vstring() 
+secFiles = cms.untracked.vstring()
 source = cms.Source ("PoolSource",fileNames = readFiles, secondaryFileNames = secFiles)
 readFiles.extend( [
        '/store/relval/CMSSW_7_4_0_pre6/RelValTTbar_13/GEN-SIM-RECO/PU25ns_MCRUN2_74_V1-v3/00000/067739D0-AFAB-E411-AC03-0025905A48D0.root'
@@ -94,8 +94,8 @@ process.load('Configuration.StandardSequences.EndOfProcess_cff')
 
 
 ### validation-specific includes
-#process.load("SimTracker.TrackAssociation.TrackAssociatorByHits_cfi")
-process.load("SimTracker.TrackAssociation.quickTrackAssociatorByHits_cfi")
+#process.load("SimTracker.TrackAssociatorProducers.trackAssociatorByHits_cfi")
+process.load("SimTracker.TrackAssociatorProducers.quickTrackAssociatorByHits_cfi")
 process.load("SimTracker.TrackAssociation.trackingParticleRecoTrackAsssociation_cfi")
 process.load("Validation.RecoTrack.cuts_cff")
 process.load("Validation.RecoTrack.MultiTrackValidator_cff")
@@ -108,7 +108,6 @@ process.quickTrackAssociatorByHits.SimToRecoDenominator = 'reco'
 
 ########### configuration MultiTrackValidator ########
 process.multiTrackValidator.associators = ['quickTrackAssociatorByHits']
-process.multiTrackValidator.skipHistoFit = False
 #process.cutsRecoTracks.quality = ['','highPurity']
 #process.cutsRecoTracks.quality = ['']
 process.multiTrackValidator.label = ['cutsRecoTracks']
@@ -127,17 +126,17 @@ process.multiTrackValidator.UseAssociators = True
 #process.cutsRecoTracks.maxRapidity  = 1.0
 
 process.quickTrackAssociatorByHits.useClusterTPAssociation = True
-process.load("SimTracker.TrackerHitAssociation.clusterTpAssociationProducer_cfi")
+process.load("SimTracker.TrackerHitAssociation.tpClusterProducer_cfi")
 
 process.validation = cms.Sequence(
     process.tpClusterProducer *
+    process.quickTrackAssociatorByHits *
     process.multiTrackValidator
 )
 
 # paths
 process.val = cms.Path(
-      process.quickTrackAssociatorByHits
-    * process.cutsRecoTracks
+      process.cutsRecoTracks
     * process.validation
 )
 
@@ -165,6 +164,3 @@ process.options = cms.untracked.PSet(
     numberOfStreams = cms.untracked.uint32(8),
     wantSummary = cms.untracked.bool(True)
 )
-
-
-

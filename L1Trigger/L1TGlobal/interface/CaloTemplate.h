@@ -11,6 +11,7 @@
  *    <TODO: enter implementation details>
  *
  * \author: Vasile Mihai Ghete - HEPHY Vienna
+ *          Vladimir Rekovic - exted for indexing
  *
  * $Date$
  * $Revision$
@@ -24,108 +25,92 @@
 // user include files
 
 //   base class
-#include "L1Trigger/L1TGlobal/interface/GtCondition.h"
+#include "L1Trigger/L1TGlobal/interface/GlobalCondition.h"
 
 // forward declarations
 
 // class declaration
-class CaloTemplate : public GtCondition
-{
+class CaloTemplate : public GlobalCondition {
+public:
+  // constructor
+  CaloTemplate();
+
+  // constructor
+  CaloTemplate(const std::string&);
+
+  // constructor
+  CaloTemplate(const std::string&, const l1t::GtConditionType&);
+
+  // copy constructor
+  CaloTemplate(const CaloTemplate&);
+
+  // destructor
+  ~CaloTemplate() override;
+
+  // assign operator
+  CaloTemplate& operator=(const CaloTemplate&);
 
 public:
+  /// typedef for a single object template
+  struct ObjectParameter {
+    unsigned int etLowThreshold;
+    unsigned int etHighThreshold;
+    unsigned int indexLow;
+    unsigned int indexHigh;
+    unsigned int etaRange;
+    unsigned int phiRange;
 
-    // constructor
-    CaloTemplate();
+    unsigned int isolationLUT;
+    unsigned int qualityLUT;
 
-    // constructor
-    CaloTemplate(const std::string& );
+    unsigned int etaWindow1Lower;
+    unsigned int etaWindow1Upper;
+    unsigned int etaWindow2Lower;
+    unsigned int etaWindow2Upper;
 
-    // constructor
-    CaloTemplate(const std::string&, const l1t::GtConditionType& );
+    unsigned int phiWindow1Lower;
+    unsigned int phiWindow1Upper;
+    unsigned int phiWindow2Lower;
+    unsigned int phiWindow2Upper;
+  };
 
-    // copy constructor
-    CaloTemplate( const CaloTemplate& );
+  /// typedef for correlation parameters
+  struct CorrelationParameter {
+    unsigned long long deltaEtaRange;
 
-    // destructor
-    virtual ~CaloTemplate();
+    unsigned long long deltaPhiRange;
+    unsigned int deltaPhiMaxbits;
 
-    // assign operator
-    CaloTemplate& operator= (const CaloTemplate&);
+    unsigned int deltaEtaRangeLower;
+    unsigned int deltaEtaRangeUpper;
 
-public:
-
-    /// typedef for a single object template
-    struct ObjectParameter
-    {
-      unsigned int etThreshold;
-      unsigned int etaRange;
-      unsigned int phiRange;
-
-      unsigned int etaWindowLower;
-      unsigned int etaWindowUpper;
-      unsigned int etaWindowVetoLower;
-      unsigned int etaWindowVetoUpper;
-
-      unsigned int phiWindowLower;
-      unsigned int phiWindowUpper;
-      unsigned int phiWindowVetoLower;
-      unsigned int phiWindowVetoUpper;
-
-    };
-
-    /// typedef for correlation parameters
-    struct CorrelationParameter
-    {
-        unsigned long long deltaEtaRange;
-
-        unsigned long long deltaPhiRange;
-        unsigned int deltaPhiMaxbits;
-
-      unsigned int deltaEtaRangeLower;
-      unsigned int deltaEtaRangeUpper;
-
-      unsigned int deltaPhiRangeLower;
-      unsigned int deltaPhiRangeUpper;
-
-    };
-
+    unsigned int deltaPhiRangeLower;
+    unsigned int deltaPhiRangeUpper;
+  };
 
 public:
+  inline const std::vector<ObjectParameter>* objectParameter() const { return &m_objectParameter; }
 
-    inline const std::vector<ObjectParameter>* objectParameter() const
-    {
-        return &m_objectParameter;
-    }
+  inline const CorrelationParameter* correlationParameter() const { return &m_correlationParameter; }
 
-    inline const CorrelationParameter* correlationParameter() const
-    {
-        return &m_correlationParameter;
-    }
+  /// set functions
+  void setConditionParameter(const std::vector<ObjectParameter>& objParameter,
+                             const CorrelationParameter& corrParameter);
 
+  /// print the condition
+  void print(std::ostream& myCout) const override;
 
-    /// set functions
-    void setConditionParameter(const std::vector<ObjectParameter>& objParameter,
-                               const CorrelationParameter& corrParameter);
-
-
-    /// print the condition
-    virtual void print(std::ostream& myCout) const;
-
-    /// output stream operator
-    friend std::ostream& operator<<(std::ostream&, const CaloTemplate&);
+  /// output stream operator
+  friend std::ostream& operator<<(std::ostream&, const CaloTemplate&);
 
 protected:
-
-    /// copy function for copy constructor and operator=
-    void copy( const CaloTemplate& cp);
-
+  /// copy function for copy constructor and operator=
+  void copy(const CaloTemplate& cp);
 
 protected:
-
-    /// variables containing the parameters
-    std::vector<ObjectParameter> m_objectParameter;
-    CorrelationParameter m_correlationParameter;
-
+  /// variables containing the parameters
+  std::vector<ObjectParameter> m_objectParameter;
+  CorrelationParameter m_correlationParameter;
 };
 
 #endif

@@ -1,45 +1,44 @@
 #ifndef ElectronRecalibSuperClusterAssociator_h
 #define ElectronRecalibSuperClusterAssociator_h
-  
+
 //
 // Package:         RecoEgamma/EgammaElectronProducers
 // Class:           ElectronRecalibSuperClusterAssociator
-// 
-// Description:   
-  
-  
+//
+// Description:
+
 #include "FWCore/Framework/interface/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "DataFormats/Common/interface/Handle.h"
 #include "FWCore/Framework/interface/EventSetup.h"
-
+#include "FWCore/Utilities/interface/InputTag.h"
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
+#include "DataFormats/EgammaCandidates/interface/GsfElectronFwd.h"
+#include "DataFormats/EgammaReco/interface/SuperClusterFwd.h"
+
 #include <string>
 
-class PixelMatchElectronAlgo;
+//class PixelMatchElectronAlgo;
 
-class ElectronRecalibSuperClusterAssociator : public edm::EDProducer
-{
- public:
-
+class ElectronRecalibSuperClusterAssociator : public edm::EDProducer {
+public:
   explicit ElectronRecalibSuperClusterAssociator(const edm::ParameterSet& conf);
 
-  virtual ~ElectronRecalibSuperClusterAssociator();
+  ~ElectronRecalibSuperClusterAssociator() override;
 
-  virtual void produce(edm::Event& e, const edm::EventSetup& c);
+  void produce(edm::Event& e, const edm::EventSetup& c) override;
 
- private:
+private:
+  edm::InputTag electronSrc_;
+  edm::InputTag superClusterCollectionEB_;
+  edm::InputTag superClusterCollectionEE_;
 
-  std::string scProducer_;
-  std::string scCollection_;
- 
-  std::string scIslandProducer_;
-  std::string scIslandCollection_;
-  
-  std::string electronProducer_;
-  std::string electronCollection_;
+  std::string outputLabel_;
 
+  edm::EDGetTokenT<reco::GsfElectronCollection> electronToken_;
+  edm::EDGetTokenT<reco::SuperClusterCollection> ebScToken_;
+  edm::EDGetTokenT<reco::SuperClusterCollection> eeScToken_;
 };
 #endif

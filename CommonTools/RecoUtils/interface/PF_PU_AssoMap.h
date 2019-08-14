@@ -17,13 +17,12 @@
 //
 //
 
-
 // system include files
 #include <memory>
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
@@ -38,22 +37,21 @@
 // class declaration
 //
 
-class PF_PU_AssoMap : public edm::EDProducer, public PF_PU_AssoMapAlgos {
-   public:
-      explicit PF_PU_AssoMap(const edm::ParameterSet&);
-      ~PF_PU_AssoMap();
+class PF_PU_AssoMap : public edm::stream::EDProducer<>, public PF_PU_AssoMapAlgos {
+public:
+  explicit PF_PU_AssoMap(const edm::ParameterSet&);
+  ~PF_PU_AssoMap() override;
 
-      static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
+  static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
-   private:
-      virtual void produce(edm::Event&, const edm::EventSetup&);
+private:
+  void produce(edm::Event&, const edm::EventSetup&) override;
 
-      // ----------member data ---------------------------
+  // ----------member data ---------------------------
 
-      edm::InputTag input_AssociationType_;
+  edm::InputTag input_AssociationType_;
 
-      edm::EDGetTokenT<reco::TrackCollection> token_TrackCollection_;
+  edm::EDGetTokenT<reco::TrackCollection> token_TrackCollection_;
 };
-
 
 #endif

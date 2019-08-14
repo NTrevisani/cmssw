@@ -1,63 +1,74 @@
 #ifndef GeneratorInterface_RivetInterface_RivetAnalyzer
 #define GeneratorInterface_RivetInterface_RivetAnalyzer
 
-#include "FWCore/Framework/interface/EDAnalyzer.h"
-#include "FWCore/Utilities/interface/InputTag.h"
+#include "FWCore/Framework/interface/one/EDAnalyzer.h"
 #include "Rivet/AnalysisHandler.hh"
 
 //DQM services
 #include "DQMServices/Core/interface/DQMStore.h"
-#include "FWCore/ServiceRegistry/interface/Service.h"
-#include "DQMServices/Core/interface/MonitorElement.h"
+
+#include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
+#include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
+#include "SimDataFormats/GeneratorProducts/interface/LHEEventProduct.h"
+#include "SimDataFormats/GeneratorProducts/interface/GenLumiInfoHeader.h"
+#include "SimDataFormats/GeneratorProducts/interface/LHERunInfoProduct.h"
 
 #include "Rivet/Tools/RivetYODA.hh"
-#include "YODA/ROOTCnv.h"
-
+//#include "YODA/ROOTCnv.h"
 
 #include <vector>
 #include <string>
 
-namespace edm{
-  class ParameterSet;
-  class Event;
-  class EventSetup;
-  class InputTag;
-}
+class RivetAnalyzer
+    : public edm::one::EDAnalyzer<edm::one::WatchRuns, edm::one::WatchLuminosityBlocks, edm::one::SharedResources> {
+public:
+  typedef dqm::legacy::DQMStore DQMStore;
+  typedef dqm::legacy::MonitorElement MonitorElement;
 
-class RivetAnalyzer : public edm::EDAnalyzer
-{
-  public:
-  RivetAnalyzer(const edm::ParameterSet&);
+  RivetAnalyzer(const edm::ParameterSet &);
 
-  virtual ~RivetAnalyzer();
+  ~RivetAnalyzer() override;
 
-  virtual void beginJob();
+  void beginJob() override;
 
-  virtual void endJob();  
+  void endJob() override;
 
-  virtual void analyze(const edm::Event&, const edm::EventSetup&);
+  void analyze(const edm::Event &, const edm::EventSetup &) override;
 
-  virtual void beginRun(const edm::Run&, const edm::EventSetup&);
+  void beginRun(const edm::Run &, const edm::EventSetup &) override;
 
-  virtual void endRun(const edm::Run&, const edm::EventSetup&);
-  
-  private:
+  void endRun(const edm::Run &, const edm::EventSetup &) override;
 
+  void beginLuminosityBlock(const edm::LuminosityBlock &, const edm::EventSetup &) override;
+
+  void endLuminosityBlock(const edm::LuminosityBlock &, const edm::EventSetup &) override;
+
+private:
   void normalizeTree();
 
-  edm::InputTag            _hepmcCollection;
-  bool                     _useExternalWeight;
-  edm::InputTag            _genEventInfoCollection;
-  Rivet::AnalysisHandler   _analysisHandler;   
-  bool                     _isFirstEvent;
-  std::string              _outFileName;
-  bool                     _doFinalize;
-  bool                     _produceDQM;
+  edm::EDGetTokenT<edm::HepMCProduct> _hepmcCollection;
+  bool _useExternalWeight;
+  bool _useLHEweights;
+  int _LHEweightNumber;
+  bool _useGENweights;
+  int _GENweightNumber;
+  edm::EDGetTokenT<LHEEventProduct> _LHECollection;
+  edm::EDGetTokenT<GenEventInfoProduct> _genEventInfoCollection;
+  edm::EDGetTokenT<GenLumiInfoHeader> _genLumiInfoToken;
+  edm::EDGetTokenT<LHERunInfoProduct> _lheRunInfoToken;
+  Rivet::AnalysisHandler _analysisHandler;
+  bool _isFirstEvent;
+  std::string _outFileName;
+  bool _doFinalize;
+  bool _produceDQM;
+  const edm::InputTag _lheLabel;
+  double _xsection;
+  std::vector<std::string> _weightNames;
+  std::vector<std::string> _lheWeightNames;
 
   DQMStore *dbe;
   std::vector<MonitorElement *> _mes;
 };
-
 
 /*
 template<class YODATYPE, class ROOTTYPE> 

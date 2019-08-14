@@ -36,17 +36,22 @@ Ref: A template for an interproduct reference to a product.
 ----------------------------------------------------------------------*/
 
 #include "DataFormats/Common/interface/CMS_CLASS_VERSION.h"
-#include "DataFormats/Common/interface/EDProductfwd.h"
-#include "DataFormats/Common/interface/EDProductGetter.h"
 #include "DataFormats/Common/interface/Handle.h"
 #include "DataFormats/Common/interface/OrphanHandle.h"
 #include "DataFormats/Common/interface/RefCore.h"
 #include "DataFormats/Common/interface/TestHandle.h"
 #include "DataFormats/Provenance/interface/ProductID.h"
 
+// Not really needed but things depend on it being here ...
+#include "DataFormats/Common/interface/Ref.h"
+
+#include <utility>
+
 namespace edm {
 
-  template<typename C>
+  class EDProductGetter;
+
+  template <typename C>
   class RefProd {
   public:
     typedef C product_type;
@@ -56,14 +61,12 @@ namespace edm {
     RefProd() : product_() {}
 
     /// General purpose constructor from handle.
-    explicit RefProd(Handle<C> const& handle) :
-    product_(handle.id(), handle.product(), 0, false) {
+    explicit RefProd(Handle<C> const& handle) : product_(handle.id(), handle.product(), nullptr, false) {
       checkTypeAtCompileTime(handle.product());
     }
 
     /// General purpose constructor from orphan handle.
-    explicit RefProd(OrphanHandle<C> const& handle) :
-    product_(handle.id(), handle.product(), 0, false) {
+    explicit RefProd(OrphanHandle<C> const& handle) : product_(handle.id(), handle.product(), nullptr, false) {
       checkTypeAtCompileTime(handle.product());
     }
 
@@ -72,35 +75,22 @@ namespace edm {
     //  any object containing this RefProd.  Also, in the future work will
     //  be done to throw an exception if an attempt is made to put any object
     //  containing this RefProd into an event(or run or lumi).
-    RefProd(C const* iProduct) :
-      product_(ProductID(), iProduct, 0, true) {
-      checkTypeAtCompileTime(iProduct);
-    }
+    RefProd(C const* iProduct) : product_(ProductID(), iProduct, 0, true) { checkTypeAtCompileTime(iProduct); }
 
     /// General purpose constructor from test handle.
     //  An exception will be thrown if an attempt is made to persistify
     //  any object containing this RefProd.  Also, in the future work will
     //  be done to throw an exception if an attempt is made to put any object
     //  containing this RefProd into an event(or run or lumi).
-    explicit RefProd(TestHandle<C> const& handle) :
-    product_(handle.id(), handle.product(), 0, true) {
+    explicit RefProd(TestHandle<C> const& handle) : product_(handle.id(), handle.product(), 0, true) {
       checkTypeAtCompileTime(handle.product());
     }
-
-    /// Constructor from Ref<C, T, F>
-    template<typename T, typename F>
-    explicit RefProd(Ref<C, T, F> const& ref);
-
-    /// Constructor from RefVector<C, T, F>
-    template<typename T, typename F>
-    explicit RefProd(RefVector<C, T, F> const& ref);
 
     // Constructor for those users who do not have a product handle,
     // but have a pointer to a product getter (such as the EventPrincipal).
     // prodGetter will ususally be a pointer to the event principal.
-    RefProd(ProductID const& productID, EDProductGetter const* prodGetter) :
-      product_(productID, 0, mustBeNonZero(prodGetter, "RefProd", productID), false) {
-    }
+    RefProd(ProductID const& productID, EDProductGetter const* prodGetter)
+        : product_(productID, nullptr, mustBeNonZero(prodGetter, "RefProd", productID), false) {}
 
     /// Destructor
     ~RefProd() {}
@@ -113,49 +103,43 @@ namespace edm {
 
     /// Returns C++ pointer to the product
     /// Will attempt to retrieve product
-    product_type const* get() const {
-      return isNull() ? 0 : this->operator->();
-    }
+    product_type const* get() const { return isNull() ? nullptr : this->operator->(); }
 
     /// Returns C++ pointer to the product
     /// Will attempt to retrieve product
-    product_type const* product() const {
-      return isNull() ? 0 : this->operator->();
-    }
+    product_type const* product() const { return isNull() ? nullptr : this->operator->(); }
 
-    RefCore const& refCore() const {
-      return product_;
-    }
+    RefCore const& refCore() const { return product_; }
 
     /// Checks for null
-    bool isNull() const {return !isNonnull();}
+    bool isNull() const { return !isNonnull(); }
 
     /// Checks for non-null
-    bool isNonnull() const {return product_.isNonnull();}
+    bool isNonnull() const { return product_.isNonnull(); }
 
     /// Checks for null
-    bool operator!() const {return isNull();}
+    bool operator!() const { return isNull(); }
 
     /// Accessor for product ID.
-    ProductID id() const {return product_.id();}
+    ProductID id() const { return product_.id(); }
 
     /// Accessor for product getter.
-    EDProductGetter const* productGetter() const {return product_.productGetter();}
+    EDProductGetter const* productGetter() const { return product_.productGetter(); }
 
     /// Checks if product is in memory.
-    bool hasCache() const {return product_.productPtr() != 0;}
+    bool hasCache() const { return product_.productPtr() != 0; }
 
     /// Checks if product is in memory.
-    bool hasProductCache() const {return hasCache();}
+    bool hasProductCache() const { return hasCache(); }
 
     /// Checks if collection is in memory or available
     /// in the Event. No type checking is done.
-    bool isAvailable() const {return product_.isAvailable();}
+    bool isAvailable() const { return product_.isAvailable(); }
 
     /// Checks if this RefProd is transient (i.e. not persistable).
-    bool isTransient() const {return product_.isTransient();}
+    bool isTransient() const { return product_.isTransient(); }
 
-    void swap(RefProd<C> &);
+    void swap(RefProd<C>&);
 
     //Needed for ROOT storage
     CMS_CLASS_VERSION(10)
@@ -167,119 +151,51 @@ namespace edm {
 
     RefCore product_;
   };
-}
+}  // namespace edm
 
-#include "DataFormats/Common/interface/Ref.h"
 #include "DataFormats/Common/interface/RefCoreGet.h"
 
 namespace edm {
-  template<typename C, typename T, typename F>
-  class RefVector;
-
-  /// Constructor from Ref.
-  template<typename C>
-  template<typename T, typename F>
-  inline
-  RefProd<C>::RefProd(Ref<C, T, F> const& ref) :
-      product_(ref.id(), ref.hasProductCache() ?  ref.product() : 0, ref.productGetter(), ref.isTransient()) {
-  }
-
-  /// Constructor from RefVector.
-  template<typename C>
-  template<typename T, typename F>
-  inline
-  RefProd<C>::RefProd(RefVector<C, T, F> const& ref) :
-      product_(ref.id(), ref.hasProductCache() ?  ref.product() : 0, ref.productGetter(), ref.isTransient()) {
-  }
 
   /// Dereference operator
-  template<typename C>
-  inline
-  C const& RefProd<C>::operator*() const {
+  template <typename C>
+  inline C const& RefProd<C>::operator*() const {
     return *(edm::template getProduct<C>(product_));
   }
 
   /// Member dereference operator
-  template<typename C>
-  inline
-  C const* RefProd<C>::operator->() const {
+  template <typename C>
+  inline C const* RefProd<C>::operator->() const {
     return edm::template getProduct<C>(product_);
   }
 
-
-  template<typename C>
-  inline
-  void RefProd<C>::swap(RefProd<C> & other) {
-    std::swap(product_, other.product_);
+  template <typename C>
+  inline void RefProd<C>::swap(RefProd<C>& other) {
+    edm::swap(product_, other.product_);
   }
 
-  template<typename C>
-  inline
-  bool
-  operator==(RefProd<C> const& lhs, RefProd<C> const& rhs) {
+  template <typename C>
+  inline bool operator==(RefProd<C> const& lhs, RefProd<C> const& rhs) {
     return lhs.refCore() == rhs.refCore();
   }
 
-  template<typename C>
-  inline
-  bool
-  operator!=(RefProd<C> const& lhs, RefProd<C> const& rhs) {
+  template <typename C>
+  inline bool operator!=(RefProd<C> const& lhs, RefProd<C> const& rhs) {
     return !(lhs == rhs);
   }
 
-  template<typename C>
-  inline
-  bool
-  operator<(RefProd<C> const& lhs, RefProd<C> const& rhs) {
-    return(lhs.refCore() < rhs.refCore());
+  template <typename C>
+  inline bool operator<(RefProd<C> const& lhs, RefProd<C> const& rhs) {
+    return (lhs.refCore() < rhs.refCore());
   }
 
-  template<typename C>
-  inline
-  void swap(RefProd<C> const& lhs, RefProd<C> const& rhs) {
+  template <typename C>
+  inline void swap(RefProd<C> const& lhs, RefProd<C> const& rhs) {
     lhs.swap(rhs);
   }
-}
+}  // namespace edm
 
-#include "DataFormats/Common/interface/HolderToVectorTrait.h"
-
-namespace edm {
-  namespace reftobase {
-
-    template<typename T>
-    struct RefProdHolderToVector {
-      static  std::auto_ptr<BaseVectorHolder<T> > makeVectorHolder() {
-        Exception::throwThis(errors::InvalidReference, "attempting to make a BaseVectorHolder<T> from a RefProd<C>.\n");
-        return std::auto_ptr<BaseVectorHolder<T> >();
-      }
-      static std::auto_ptr<RefVectorHolderBase> makeVectorBaseHolder() {
-        Exception::throwThis(errors::InvalidReference, "attempting to make a RefVectorHolderBase from a RefProd<C>.\n");
-        return std::auto_ptr<RefVectorHolderBase>();
-      }
-    };
-
-    template<typename C, typename T>
-    struct HolderToVectorTrait<T, RefProd<C> > {
-      typedef RefProdHolderToVector<T> type;
-    };
-
-    struct RefProdRefHolderToRefVector {
-      static std::auto_ptr<RefVectorHolderBase> makeVectorHolder() {
-        Exception::throwThis(errors::InvalidReference, "attempting to make a BaseVectorHolder<T> from a RefProd<C>.\n");
-        return std::auto_ptr<RefVectorHolderBase>();
-      }
-      static std::auto_ptr<RefVectorHolderBase> makeVectorBaseHolder() {
-        Exception::throwThis(errors::InvalidReference, "attempting to make a RefVectorHolderBase from a RefProd<C>.\n");
-        return std::auto_ptr<RefVectorHolderBase>();
-      }
-    };
-
-    template<typename C>
-    struct RefHolderToRefVectorTrait<RefProd<C> > {
-      typedef RefProdRefHolderToRefVector type;
-    };
-
-  }
-}
+//Handle specialization here
+#include "DataFormats/Common/interface/HolderToVectorTrait_RefProd_specialization.h"
 
 #endif

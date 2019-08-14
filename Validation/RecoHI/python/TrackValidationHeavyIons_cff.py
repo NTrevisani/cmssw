@@ -1,7 +1,10 @@
 import FWCore.ParameterSet.Config as cms
 
 # track associator settings
-from Validation.RecoTrack.TrackValidation_cff import trackAssociatorByHitsRecoDenom
+import SimTracker.TrackAssociatorProducers.quickTrackAssociatorByHits_cfi
+# to do the track<->TP association with TrackerHitAssociator
+trackAssociatorByHitsRecoDenom = SimTracker.TrackAssociatorProducers.quickTrackAssociatorByHits_cfi.quickTrackAssociatorByHitsTrackerHitAssociator.clone()
+from SimGeneral.TrackingAnalysis.trackingParticleNumberOfLayersProducer_cff import *
 
 # reco track quality cuts
 from Validation.RecoTrack.cuts_cff import *
@@ -19,15 +22,19 @@ findableSimTracks.ptMin = 2.0
 # setup multi-track validator
 from Validation.RecoTrack.MultiTrackValidator_cff import *
 hiTrackValidator = multiTrackValidator.clone(
+    associators = ["trackAssociatorByHitsRecoDenom"],
+    UseAssociators = True,
     label_tp_effic = cms.InputTag("primaryChgSimTracks"),
     label_tp_fake  = cms.InputTag("cutsTPFake"),
+    label_tp_effic_refvector = True,
+    label_tp_fake_refvector = True,
     signalOnlyTP = cms.bool(False),
     trackCollectionForDrCalculation = cms.InputTag("cutsRecoTracks"),
-    skipHistoFit = cms.untracked.bool(True), # done in post-processing
     minpT = cms.double(1.0),
     maxpT = cms.double(100.0),
     nintpT = cms.int32(40),
-    useLogPt = cms.untracked.bool(True)
+    useLogPt = cms.untracked.bool(True),
+    cores = cms.InputTag("")
     )
 
 hiTrackValidator.label = cms.VInputTag(cms.InputTag('cutsRecoTracks'),
@@ -40,6 +47,7 @@ hiTrackPrevalidation = cms.Sequence(
     * cutsTPFake
     * cutsRecoTracks
     * cutsRecoTracksHP
+    * trackingParticleNumberOfLayersProducer
     )
 
 # track validation sequence

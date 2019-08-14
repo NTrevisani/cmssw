@@ -7,20 +7,19 @@
 #include "FWCore/Utilities/src/Guid.h"
 
 #include <string>
+#include <cmath>
 
 #include <unistd.h>
 #include <fcntl.h>
-#include <string.h>
 
 #include <openssl/x509.h>
 #include <openssl/pem.h>
 
-#define UPDATE_STATISTIC(x) \
-    m_ ## x = x;
+#define UPDATE_STATISTIC(x) m_##x = x;
 
-#define UPDATE_AND_OUTPUT_STATISTIC(x) \
-    os << "\"" #x "\":" << (x-m_ ## x) << ", "; \
-    UPDATE_STATISTIC(x)
+#define UPDATE_AND_OUTPUT_STATISTIC(x)        \
+  os << "\"" #x "\":" << (x - m_##x) << ", "; \
+  UPDATE_STATISTIC(x)
 
 // Simple hack to define HOST_NAME_MAX on Mac.
 // Allows arrays to be statically allocated
@@ -33,21 +32,18 @@
 
 using namespace edm::storage;
 
-StatisticsSenderService::FileStatistics::FileStatistics() :
-  m_read_single_operations(0),
-  m_read_single_bytes(0),
-  m_read_single_square(0),
-  m_read_vector_operations(0),
-  m_read_vector_bytes(0),
-  m_read_vector_square(0),
-  m_read_vector_count_sum(0),
-  m_read_vector_count_square(0),
-  m_read_bytes_at_close(0),
-  m_start_time(time(NULL))
-{}
+StatisticsSenderService::FileStatistics::FileStatistics()
+    : m_read_single_operations(0),
+      m_read_single_bytes(0),
+      m_read_single_square(0),
+      m_read_vector_operations(0),
+      m_read_vector_bytes(0),
+      m_read_vector_square(0),
+      m_read_vector_count_sum(0),
+      m_read_vector_count_square(0),
+      m_start_time(time(nullptr)) {}
 
-void
-StatisticsSenderService::FileStatistics::fillUDP(std::ostringstream &os) {
+void StatisticsSenderService::FileStatistics::fillUDP(std::ostringstream &os) {
   const StorageAccount::StorageStats &stats = StorageAccount::summary();
   ssize_t read_single_operations = 0;
   ssize_t read_single_bytes = 0;
@@ -57,18 +53,19 @@ StatisticsSenderService::FileStatistics::fillUDP(std::ostringstream &os) {
   ssize_t read_vector_square = 0;
   ssize_t read_vector_count_sum = 0;
   ssize_t read_vector_count_square = 0;
-  for (StorageAccount::StorageStats::const_iterator i = stats.begin (); i != stats.end(); ++i) {
-    if (i->first == "tstoragefile") {
+  auto token = StorageAccount::tokenForStorageClassName("tstoragefile");
+  for (StorageAccount::StorageStats::const_iterator i = stats.begin(); i != stats.end(); ++i) {
+    if (i->first == token.value()) {
       continue;
     }
-    for (StorageAccount::OperationStats::const_iterator j = i->second->begin(); j != i->second->end(); ++j) {
-      if (j->first == "readv") {
+    for (StorageAccount::OperationStats::const_iterator j = i->second.begin(); j != i->second.end(); ++j) {
+      if (j->first == static_cast<int>(StorageAccount::Operation::readv)) {
         read_vector_operations += j->second.attempts;
         read_vector_bytes += j->second.amount;
         read_vector_count_square += j->second.vector_square;
         read_vector_square += j->second.amount_square;
         read_vector_count_sum += j->second.vector_count;
-      } else if (j->first == "read") {
+      } else if (j->first == static_cast<int>(StorageAccount::Operation::read)) {
         read_single_operations += j->second.attempts;
         read_single_bytes += j->second.amount;
         read_single_square += j->second.amount_square;
@@ -77,27 +74,43 @@ StatisticsSenderService::FileStatistics::fillUDP(std::ostringstream &os) {
   }
   int64_t single_op_count = read_single_operations - m_read_single_operations;
   if (single_op_count > 0) {
-    double single_sum = read_single_bytes-m_read_single_bytes;
-    double single_average = single_sum/static_cast<double>(single_op_count);
-    os << "\"read_single_sigma\":" << sqrt((static_cast<double>(read_single_square-m_read_single_square) - single_average*single_average*single_op_count)/static_cast<double>(single_op_count)) << ", ";
+    double single_sum = read_single_bytes - m_read_single_bytes;
+    double single_average = single_sum / static_cast<double>(single_op_count);
+    os << "\"read_single_sigma\":"
+       << sqrt((static_cast<double>(read_single_square - m_read_single_square) -
+                single_average * single_average * single_op_count) /
+               static_cast<double>(single_op_count))
+       << ", ";
     os << "\"read_single_average\":" << single_average << ", ";
   }
   m_read_single_square = read_single_square;
   int64_t vector_op_count = read_vector_operations - m_read_vector_operations;
   if (vector_op_count > 0) {
-    double vector_average = static_cast<double>(read_vector_bytes-m_read_vector_bytes)/static_cast<double>(vector_op_count);
+    double vector_average =
+        static_cast<double>(read_vector_bytes - m_read_vector_bytes) / static_cast<double>(vector_op_count);
     os << "\"read_vector_average\":" << vector_average << ", ";
-    os << "\"read_vector_sigma\":" << sqrt((static_cast<double>(read_vector_square-m_read_vector_square) - vector_average*vector_average*vector_op_count)/static_cast<double>(vector_op_count)) << ", ";
-    double vector_count_average = static_cast<double>(read_vector_count_sum-m_read_vector_count_sum)/static_cast<double>(vector_op_count);
+    os << "\"read_vector_sigma\":"
+       << sqrt((static_cast<double>(read_vector_square - m_read_vector_square) -
+                vector_average * vector_average * vector_op_count) /
+               static_cast<double>(vector_op_count))
+       << ", ";
+    double vector_count_average =
+        static_cast<double>(read_vector_count_sum - m_read_vector_count_sum) / static_cast<double>(vector_op_count);
     os << "\"read_vector_count_average\":" << vector_count_average << ", ";
-    os << "\"read_vector_count_sigma\":" << sqrt((static_cast<double>(read_vector_count_square-m_read_vector_count_square) - vector_count_average*vector_count_average*vector_op_count)/static_cast<double>(vector_op_count)) << ", ";
+    os << "\"read_vector_count_sigma\":"
+       << sqrt((static_cast<double>(read_vector_count_square - m_read_vector_count_square) -
+                vector_count_average * vector_count_average * vector_op_count) /
+               static_cast<double>(vector_op_count))
+       << ", ";
   }
   m_read_vector_square = read_vector_square;
   m_read_vector_count_square = read_vector_count_square;
   m_read_vector_count_sum = read_vector_count_sum;
 
-  os << "\"read_bytes\":" << (read_vector_bytes + read_single_bytes - m_read_vector_bytes - m_read_single_bytes) << ", ";
-  os << "\"read_bytes_at_close\":" << (read_vector_bytes + read_single_bytes - m_read_vector_bytes - m_read_single_bytes) << ", ";
+  os << "\"read_bytes\":" << (read_vector_bytes + read_single_bytes - m_read_vector_bytes - m_read_single_bytes)
+     << ", ";
+  os << "\"read_bytes_at_close\":"
+     << (read_vector_bytes + read_single_bytes - m_read_vector_bytes - m_read_single_bytes) << ", ";
 
   // See top of file for macros; not complex, just avoiding copy/paste
   UPDATE_AND_OUTPUT_STATISTIC(read_single_operations)
@@ -106,23 +119,22 @@ StatisticsSenderService::FileStatistics::fillUDP(std::ostringstream &os) {
   UPDATE_AND_OUTPUT_STATISTIC(read_vector_bytes)
 
   os << "\"start_time\":" << m_start_time << ", ";
-  m_start_time = time(NULL);
+  m_start_time = time(nullptr);
   // NOTE: last entry doesn't have the trailing comma.
   os << "\"end_time\":" << m_start_time;
 }
 
-StatisticsSenderService::StatisticsSenderService(edm::ParameterSet const& /*pset*/, edm::ActivityRegistry& ar) :
-  m_clienthost("unknown"),
-  m_clientdomain("unknown"),
-  m_serverhost("unknown"),
-  m_serverdomain("unknown"),
-  m_filelfn("unknown"),
-  m_filestats(),
-  m_guid(Guid().toString()),
-  m_counter(0),
-  m_size(-1),
-  m_userdn("unknown")
-{
+StatisticsSenderService::StatisticsSenderService(edm::ParameterSet const & /*pset*/, edm::ActivityRegistry &ar)
+    : m_clienthost("unknown"),
+      m_clientdomain("unknown"),
+      m_serverhost("unknown"),
+      m_serverdomain("unknown"),
+      m_filelfn("unknown"),
+      m_filestats(),
+      m_guid(Guid().toString()),
+      m_counter(0),
+      m_size(-1),
+      m_userdn("unknown") {
   determineHostnames();
   ar.watchPreCloseFile(this, &StatisticsSenderService::filePreCloseEvent);
   if (!getX509Subject(m_userdn)) {
@@ -130,35 +142,36 @@ StatisticsSenderService::StatisticsSenderService(edm::ParameterSet const& /*pset
   }
 }
 
-const char *
-StatisticsSenderService::getJobID() {
-  const char * id = getenv(JOB_UNIQUE_ID_ENV);
+const char *StatisticsSenderService::getJobID() {
+  const char *id = getenv(JOB_UNIQUE_ID_ENV);
   // Dashboard developers requested that we migrate to this environment variable.
   return id ? id : getenv(JOB_UNIQUE_ID_ENV_V2);
 }
 
-void
-StatisticsSenderService::setCurrentServer(const std::string &servername) {
+void StatisticsSenderService::setCurrentServer(const std::string &servername) {
   size_t dot_pos = servername.find(".");
+  std::string serverhost;
+  std::string serverdomain;
   if (dot_pos == std::string::npos) {
-    m_serverhost = servername.substr(0, servername.find(":"));
-    m_serverdomain = "unknown";
+    serverhost = servername.substr(0, servername.find(":"));
+    serverdomain = "unknown";
   } else {
-    m_serverhost = servername.substr(0, dot_pos);
-    m_serverdomain = servername.substr(dot_pos+1, servername.find(":")-dot_pos-1);
-    if (m_serverdomain.empty()) {
-      m_serverdomain = "unknown";
+    serverhost = servername.substr(0, dot_pos);
+    serverdomain = servername.substr(dot_pos + 1, servername.find(":") - dot_pos - 1);
+    if (serverdomain.empty()) {
+      serverdomain = "unknown";
     }
+  }
+  {
+    std::lock_guard<std::mutex> sentry(m_servermutex);
+    m_serverhost = std::move(serverhost);
+    m_serverdomain = std::move(serverdomain);
   }
 }
 
-void
-StatisticsSenderService::setSize(size_t size) {
-  m_size = size;
-}
+void StatisticsSenderService::setSize(size_t size) { m_size = size; }
 
-void
-StatisticsSenderService::filePreCloseEvent(std::string const& lfn, bool usedFallback) {
+void StatisticsSenderService::filePreCloseEvent(std::string const &lfn, bool usedFallback) {
   m_filelfn = lfn;
 
   edm::Service<edm::SiteLocalConfig> pSLC;
@@ -166,17 +179,14 @@ StatisticsSenderService::filePreCloseEvent(std::string const& lfn, bool usedFall
     return;
   }
 
-  const struct addrinfo * addresses = pSLC->statisticsDestination();
+  const struct addrinfo *addresses = pSLC->statisticsDestination();
   if (!addresses) {
     return;
   }
 
-  std::set<std::string> const * info = pSLC->statisticsInfo();
-  if (info && info->size() && (m_userdn != "unknown") && (
-      (info->find("dn") == info->end()) ||
-      (info->find("nodn") != info->end()))
-     )
-  {
+  std::set<std::string> const *info = pSLC->statisticsInfo();
+  if (info && !info->empty() && (m_userdn != "unknown") &&
+      ((info->find("dn") == info->end()) || (info->find("nodn") != info->end()))) {
     m_userdn = "not reported";
   }
 
@@ -188,16 +198,17 @@ StatisticsSenderService::filePreCloseEvent(std::string const& lfn, bool usedFall
     if (sock < 0) {
       continue;
     }
+    auto close_del = [](int *iSocket) { close(*iSocket); };
+    std::unique_ptr<int, decltype(close_del)> guard(&sock, close_del);
     if (sendto(sock, results.c_str(), results.size(), 0, address->ai_addr, address->ai_addrlen) >= 0) {
-      break; 
+      break;
     }
   }
 
   m_counter++;
 }
 
-void
-StatisticsSenderService::determineHostnames(void) {
+void StatisticsSenderService::determineHostnames(void) {
   char tmpName[HOST_NAME_MAX];
   if (gethostname(tmpName, HOST_NAME_MAX) != 0) {
     // Sigh, no way to log errors from here.
@@ -209,13 +220,12 @@ StatisticsSenderService::determineHostnames(void) {
   if (dot_pos == std::string::npos) {
     m_clientdomain = "unknown";
   } else {
-    m_clientdomain = m_clienthost.substr(dot_pos+1, m_clienthost.size()-dot_pos-1);
+    m_clientdomain = m_clienthost.substr(dot_pos + 1, m_clienthost.size() - dot_pos - 1);
     m_clienthost = m_clienthost.substr(0, dot_pos);
   }
 }
 
-void
-StatisticsSenderService::fillUDP(const std::string& siteName, bool usedFallback, std::string &udpinfo) {
+void StatisticsSenderService::fillUDP(const std::string &siteName, bool usedFallback, std::string &udpinfo) {
   std::ostringstream os;
 
   // Header - same for all IO accesses
@@ -226,16 +236,24 @@ StatisticsSenderService::fillUDP(const std::string& siteName, bool usedFallback,
   if (usedFallback) {
     os << "\"fallback\": true, ";
   }
+  std::string serverhost;
+  std::string serverdomain;
+  {
+    std::lock_guard<std::mutex> sentry(m_servermutex);
+    serverhost = m_serverhost;
+    serverdomain = m_serverdomain;
+  }
+
   os << "\"user_dn\":\"" << m_userdn << "\", ";
   os << "\"client_host\":\"" << m_clienthost << "\", ";
   os << "\"client_domain\":\"" << m_clientdomain << "\", ";
-  os << "\"server_host\":\"" << m_serverhost << "\", ";
-  os << "\"server_domain\":\"" << m_serverdomain << "\", ";
+  os << "\"server_host\":\"" << serverhost << "\", ";
+  os << "\"server_domain\":\"" << serverdomain << "\", ";
   os << "\"unique_id\":\"" << m_guid << "-" << m_counter << "\", ";
   os << "\"file_lfn\":\"" << m_filelfn << "\", ";
   // Dashboard devs requested that we send out no app_info if a job ID
   // is not present in the environment.
-  const char * jobId = getJobID();
+  const char *jobId = getJobID();
   if (jobId) {
     os << "\"app_info\":\"" << jobId << "\", ";
   }
@@ -266,17 +284,17 @@ StatisticsSenderService::fillUDP(const std::string& siteName, bool usedFallback,
  * THIS DOES NOT VERIFY THE RESULTS, and is a best-effort GUESS.
  * Again, DO NOT REUSE THIS CODE THINKING IT VERIFIES THE CHAIN!
  */
-static X509 * findEEC(STACK_OF(X509) * certstack) {
+static X509 *findEEC(STACK_OF(X509) * certstack) {
   int depth = sk_X509_num(certstack);
   if (depth == 0) {
     return nullptr;
   }
-  int idx = depth-1;
+  int idx = depth - 1;
   char *priorsubject = nullptr;
   char *subject = nullptr;
   X509 *x509cert = sk_X509_value(certstack, idx);
-  for (; x509cert && idx>0; idx--) {
-    subject = X509_NAME_oneline(X509_get_subject_name(x509cert),0,0);
+  for (; x509cert && idx > 0; idx--) {
+    subject = X509_NAME_oneline(X509_get_subject_name(x509cert), nullptr, 0);
     if (subject && priorsubject && (strncmp(subject, priorsubject, strlen(subject)) != 0)) {
       break;
     }
@@ -293,8 +311,7 @@ static X509 * findEEC(STACK_OF(X509) * certstack) {
   return x509cert;
 }
 
-static bool
-getX509SubjectFromFile(const std::string &filename, std::string &result) {
+static bool getX509SubjectFromFile(const std::string &filename, std::string &result) {
   BIO *biof = nullptr;
   STACK_OF(X509) *certs = nullptr;
   char *subject = nullptr;
@@ -303,34 +320,42 @@ getX509SubjectFromFile(const std::string &filename, std::string &result) {
   char *name = nullptr;
   long len = 0U;
 
-  if((biof = BIO_new_file(filename.c_str(), "r")))  {
-
+  if ((biof = BIO_new_file(filename.c_str(), "r"))) {
     certs = sk_X509_new_null();
     bool encountered_error = false;
     while ((!encountered_error) && (!BIO_eof(biof)) && PEM_read_bio(biof, &name, &header, &data, &len)) {
       if (strcmp(name, PEM_STRING_X509) == 0 || strcmp(name, PEM_STRING_X509_OLD) == 0) {
-        X509 * tmp_cert = nullptr;
+        X509 *tmp_cert = nullptr;
         // See WARNINGS section in http://www.openssl.org/docs/crypto/d2i_X509.html
         // Without this cmsRun crashes on a mac with a valid grid proxy.
         const unsigned char *p;
-        p=data;
+        p = data;
         tmp_cert = d2i_X509(&tmp_cert, &p, len);
         if (tmp_cert) {
           sk_X509_push(certs, tmp_cert);
         } else {
           encountered_error = true;
         }
-      } // Note we ignore any proxy key in the file.
-      if (data) { OPENSSL_free(data); data = nullptr;}
-      if (header) { OPENSSL_free(header); header = nullptr;}
-      if (name) { OPENSSL_free(name); name = nullptr;}
+      }  // Note we ignore any proxy key in the file.
+      if (data) {
+        OPENSSL_free(data);
+        data = nullptr;
+      }
+      if (header) {
+        OPENSSL_free(header);
+        header = nullptr;
+      }
+      if (name) {
+        OPENSSL_free(name);
+        name = nullptr;
+      }
     }
     X509 *x509cert = nullptr;
     if (!encountered_error && sk_X509_num(certs)) {
       x509cert = findEEC(certs);
     }
     if (x509cert) {
-      subject = X509_NAME_oneline(X509_get_subject_name(x509cert),0,0);
+      subject = X509_NAME_oneline(X509_get_subject_name(x509cert), nullptr, 0);
     }
     // Note we do not free x509cert directly, as it's still owned by the certs stack.
     if (certs) {
@@ -341,14 +366,13 @@ getX509SubjectFromFile(const std::string &filename, std::string &result) {
     if (subject) {
       result = subject;
       OPENSSL_free(subject);
-     return true;
+      return true;
     }
   }
   return false;
 }
 
-bool
-StatisticsSenderService::getX509Subject(std::string &result) {
+bool StatisticsSenderService::getX509Subject(std::string &result) {
   char *filename = getenv("X509_USER_PROXY");
   if (filename && getX509SubjectFromFile(filename, result)) {
     return true;

@@ -23,12 +23,13 @@ namespace edm {
   class Provenance;
   class RunAuxiliary;
   class RunID;
+  class StableProvenance;
   class Timestamp;
   class ProductProvenanceRetriever;
-}
+}  // namespace edm
 
 namespace cms {
-  class Exception; // In FWCore/Utilities
+  class Exception;  // In FWCore/Utilities
 }
 
 #include "DataFormats/Provenance/interface/BranchIDList.h"

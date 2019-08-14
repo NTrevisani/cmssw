@@ -24,28 +24,26 @@ namespace edm {
   class ConfigurationDescriptions;
 }
 
-template<typename T1>
+template <typename T1>
 class HLTEcalPFClusterIsolationProducer : public edm::stream::EDProducer<> {
-
   typedef std::vector<T1> T1Collection;
   typedef edm::Ref<T1Collection> T1Ref;
-  typedef edm::AssociationMap<edm::OneToValue<std::vector<T1>, float > > T1IsolationMap;
-  
- public:
+  typedef edm::AssociationMap<edm::OneToValue<std::vector<T1>, float> > T1IsolationMap;
+
+public:
   explicit HLTEcalPFClusterIsolationProducer(const edm::ParameterSet&);
-  ~HLTEcalPFClusterIsolationProducer();    
-      
+  ~HLTEcalPFClusterIsolationProducer() override;
+
   void produce(edm::Event&, const edm::EventSetup&) override;
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
-  
- private:
 
+private:
   bool computedRVeto(T1Ref candRef, reco::PFClusterRef pfclu);
-  
+
   edm::EDGetTokenT<T1Collection> recoCandidateProducer_;
   const edm::EDGetTokenT<reco::PFClusterCollection> pfClusterProducer_;
   const edm::EDGetTokenT<double> rhoProducer_;
-  
+
   double drVeto2_;
   const double drMax_;
   const double drVetoBarrel_;
@@ -56,10 +54,10 @@ class HLTEcalPFClusterIsolationProducer : public edm::stream::EDProducer<> {
   const double energyEndcap_;
 
   const bool doRhoCorrection_;
-  const float rhoMax_;
-  const float rhoScale_;
-  const float effectiveAreaBarrel_;
-  const float effectiveAreaEndcap_;
+  const double rhoMax_;
+  const double rhoScale_;
+  const std::vector<double> effectiveAreas_;
+  const std::vector<double> absEtaLowEdges_;
 };
 
 #endif

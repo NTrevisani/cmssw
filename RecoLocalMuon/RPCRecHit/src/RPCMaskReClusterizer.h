@@ -6,23 +6,15 @@
  */
 
 #include "RPCRollMask.h"
-
-#include "RPCCluster.h"
-#include "RPCClusterizer.h"
 #include "RPCClusterContainer.h"
-
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 
-
-class RPCMaskReClusterizer 
-{
- public :
-
-   RPCMaskReClusterizer();
-   ~RPCMaskReClusterizer();
-   RPCClusterContainer doAction(const RPCDetId& ,RPCClusterContainer& , const RollMask& );
-   int get(const RollMask& ,int );
-
+class RPCMaskReClusterizer {
+public:
+  RPCMaskReClusterizer(){};
+  ~RPCMaskReClusterizer(){};
+  RPCClusterContainer doAction(const RPCDetId& id, RPCClusterContainer& initClusters, const RollMask& mask) const;
+  bool get(const RollMask& mask, int strip) const;
 };
 
 #endif

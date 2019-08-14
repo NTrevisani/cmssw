@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import range
 from PhysicsTools.Heppy.analyzers.core.Analyzer import Analyzer
 from PhysicsTools.Heppy.analyzers.core.AutoHandle import AutoHandle
 from PhysicsTools.Heppy.physicsutils.genutils import isNotFromHadronicShower, realGenMothers, realGenDaughters
@@ -32,6 +34,7 @@ class GeneratorAnalyzer( Analyzer ):
             event.genHiggsBosons = []
             event.genVBosons = []
             event.gennus     = []  # prompt neutrinos
+            event.gennusFromTop = []  # Neutrinos from t->W decay
             event.genleps    = []  # leptons from direct decays
             event.gentauleps = []  # leptons from prompt taus
             event.gentaus    = []  # hadronically-decaying taus (if allGenTaus is False) or all taus (if allGenTaus is True)
@@ -40,9 +43,10 @@ class GeneratorAnalyzer( Analyzer ):
             event.genwzquarks   = [] # quarks from W,Z decays
             event.genbquarksFromTop = []
             event.genbquarksFromH   = []
+            event.genlepsFromTop = [] #mu/ele that have a t->W chain as ancestor, also contained in event.genleps
        event.genwzquarks and event.genbquarks, might have overlaps 
        event.genbquarksFromTop and event.genbquarksFromH are all contained in event.genbquarks
-       
+
        """
 
     def __init__(self, cfg_ana, cfg_comp, looperName ):
@@ -56,7 +60,7 @@ class GeneratorAnalyzer( Analyzer ):
     def declareHandles(self):
         super(GeneratorAnalyzer, self).declareHandles()
         self.mchandles['genParticles'] = AutoHandle( 'prunedGenParticles', 'std::vector<reco::GenParticle>' )
-
+                
     def beginLoop(self,setup):
         super(GeneratorAnalyzer,self).beginLoop(setup)
 
@@ -64,7 +68,9 @@ class GeneratorAnalyzer( Analyzer ):
         verbose = getattr(self.cfg_ana, 'verbose', False)
         rawGenParticles = self.mchandles['genParticles'].product() 
         good = []; keymap = {};
+        allGenParticles = []
         for rawIndex,p in enumerate(rawGenParticles):
+            if self.makeAllGenParticles: allGenParticles.append(p)
             id     = abs(p.pdgId())
             status = p.status()
             # particles must be status > 2, except for prompt leptons, photons, neutralinos
@@ -79,12 +85,12 @@ class GeneratorAnalyzer( Analyzer ):
             #        "  ".join("%d[%d]" % (p.daughter(i).pdgId(), p.daughter(i).status()) for i in xrange(p.numberOfDaughters())))
             if id in self.savePreFSRParticleIds:
                 # for light objects, we want them pre-radiation
-                if any((p.mother(j).pdgId() == p.pdgId()) for j in xrange(p.numberOfMothers())):
+                if any((p.mother(j).pdgId() == p.pdgId()) for j in range(p.numberOfMothers())):
                     #print "    fail auto-decay"
                     continue
             else:
                 # everything else, we want it after radiation, i.e. just before decay
-                if any((p.daughter(j).pdgId() == p.pdgId() and p.daughter(j).status > 2) for j in xrange(p.numberOfDaughters())):
+                if any((p.daughter(j).pdgId() == p.pdgId() and p.daughter(j).status() > 2) for j in range(p.numberOfDaughters())):
                     #print "    fail auto-decay"
                     continue
             # FIXME find a better criterion to discard there
@@ -105,8 +111,11 @@ class GeneratorAnalyzer( Analyzer ):
                 if interestingPdgId(mom.pdgId()) or (getattr(mom,'rawIndex',-1) in keymap):
                     #print "    interesting mom"
                     # exclude extra x from p -> p + x
-                    if not any(mom.daughter(j2).pdgId() == mom.pdgId() for j2 in xrange(mom.numberOfDaughters())):
+                    if not any(mom.daughter(j2).pdgId() == mom.pdgId() for j2 in range(mom.numberOfDaughters())):
                         #print "         pass no-self-decay"
+                        ok = True
+                    # Account for generator feature with Higgs decaying to itself with same four-vector but no daughters
+                    elif mom.pdgId() == 25 and any(mom.daughter(j2).pdgId() == 25 and mom.daughter(j2).numberOfDaughters()==0 for j2 in range(mom.numberOfDaughters())):
                         ok = True
                 if abs(mom.pdgId()) == 15:
                     # if we're a tau daughter we're status 2
@@ -116,6 +125,9 @@ class GeneratorAnalyzer( Analyzer ):
                 if not ok and p.pt() > 10 and id in [1,2,3,4,5,21,22] and any(interestingPdgId(d.pdgId()) for d in realGenDaughters(mom)):
                     # interesting for being a parton brother of an interesting particle (to get the extra jets in ME+PS) 
                     ok = True 
+                if not ok and id in [11, 13, 15] and abs(mom.pdgId()) in [1,2,3,4,5,21]:
+                    # Lepton e.g. in off-shell DY with the mother being one of the incoming partons
+                    ok = True
             if ok:
                 gp = p
                 gp.rawIndex = rawIndex # remember its index, so that we can set the mother index later
@@ -131,10 +143,10 @@ class GeneratorAnalyzer( Analyzer ):
                 if ancestor.key() in keymap:
                     gp.motherIndex = keymap[ancestor.key()]
                     if ancestor.pdgId() != good[gp.motherIndex].pdgId():
-                        print "Error keying %d: motherIndex %d, ancestor.pdgId %d, good[gp.motherIndex].pdgId() %d " % (igp, gp.motherIndex, ancestor.pdgId(),  good[gp.motherIndex].pdgId())
+                        print("Error keying %d: motherIndex %d, ancestor.pdgId %d, good[gp.motherIndex].pdgId() %d " % (igp, gp.motherIndex, ancestor.pdgId(),  good[gp.motherIndex].pdgId()))
                     break
                 ancestor = None if ancestor.numberOfMothers() == 0 else ancestor.motherRef(0)
-            if abs(gp.pdgId()) not in {1,2,3,4,5,11,12,13,14,15,16,21}:
+            if abs(gp.pdgId()) not in [1,2,3,4,5,11,12,13,14,15,16,21]:
                 gp.sourceId = gp.pdgId()
             if gp.motherIndex != -1:
                 ancestor = good[gp.motherIndex]
@@ -142,7 +154,7 @@ class GeneratorAnalyzer( Analyzer ):
                     gp.sourceId = ancestor.sourceId
         event.generatorSummary = good
         # add the ID of the mother to be able to recreate last decay chains
-        for ip,p in enumerate(event.generatorSummary):
+        for ip,p in enumerate(good):
             moms = realGenMothers(p)
             if len(moms)==0:
                 p.motherId = 0
@@ -156,27 +168,21 @@ class GeneratorAnalyzer( Analyzer ):
                 p.motherId = -9999
                 p.grandmotherId = -9999
             if verbose:
-                print "%3d  {%6d}: %+8d  %3d :  %8.2f   %+5.2f   %+5.2f : %d %2d : %+8d {%3d}: %s" % ( ip,p.rawIndex,
+                print("%3d  {%6d}: %+8d  %3d :  %8.2f   %+5.2f   %+5.2f : %d %2d : %+8d {%3d}: %s" % ( ip,p.rawIndex,
                         p.pdgId(), p.status(), p.pt(), p.eta(), p.phi(), len(moms), p.numberOfDaughters(), 
                         p.motherId, p.motherIndex,
-                        "  ".join("%d[%d]" % (p.daughter(i).pdgId(), p.daughter(i).status()) for i in xrange(p.numberOfDaughters())))
+                        "  ".join("%d[%d]" % (p.daughter(i).pdgId(), p.daughter(i).status()) for i in range(p.numberOfDaughters()))))
         if verbose:
-            print "\n\n"
+            print("\n\n")
 
         if self.makeAllGenParticles:
-            event.genParticles = []
-            for rawIndex,p in enumerate(rawGenParticles):
-                if rawIndex in keymap:
-                    gp = event.generatorSummary[keymap[rawIndex]]
-                else:
-                    gp = p
-                    gp.rawIndex = rawIndex 
-                    gp.genSummaryIndex = -1
-                event.genParticles.append(gp)
+            event.genParticles = allGenParticles
+
         if self.makeSplittedGenLists:
             event.genHiggsBosons = []
             event.genVBosons     = []
             event.gennus         = []
+            event.gennusFromTop  = []
             event.genleps        = []
             event.gentauleps     = []
             event.gentaus        = []
@@ -185,6 +191,7 @@ class GeneratorAnalyzer( Analyzer ):
             event.genwzquarks    = []
             event.genbquarksFromTop = []
             event.genbquarksFromH   = []
+            event.genlepsFromTop = []
             for p in event.generatorSummary:
                 id = abs(p.pdgId())
                 if id == 25: 
@@ -193,11 +200,37 @@ class GeneratorAnalyzer( Analyzer ):
                     event.genVBosons.append(p)
                 elif id in {12,14,16}:
                     event.gennus.append(p)
+
+                    momids = [(m, abs(m.pdgId())) for m in realGenMothers(p)]
+
+                    #have a look at the lepton mothers
+                    for mom, momid in momids:
+                        #lepton from W
+                        if momid == 24:
+                            wmomids = [abs(m.pdgId()) for m in realGenMothers(mom)]
+                            #W from t
+                            if 6 in wmomids:
+                                #save mu,e from t->W->mu/e
+                                event.gennusFromTop.append(p)
+
                 elif id in {11,13}:
+                    #taus to separate vector
                     if abs(p.motherId) == 15:
                         event.gentauleps.append(p)
+                    #all muons and electrons
                     else:
                         event.genleps.append(p)
+                        momids = [(m, abs(m.pdgId())) for m in realGenMothers(p)]
+
+                        #have a look at the lepton mothers
+                        for mom, momid in momids:
+                            #lepton from W
+                            if momid == 24:
+                                wmomids = [abs(m.pdgId()) for m in realGenMothers(mom)]
+                                #W from t
+                                if 6 in wmomids:
+                                    #save mu,e from t->W->mu/e
+                                    event.genlepsFromTop.append(p)
                 elif id == 15:
                     if self.allGenTaus or not any([abs(d.pdgId()) in {11,13} for d in realGenDaughters(p)]):
                         event.gentaus.append(p)
@@ -225,11 +258,11 @@ import PhysicsTools.HeppyCore.framework.config as cfg
 setattr(GeneratorAnalyzer,"defaultConfig",
     cfg.Analyzer(GeneratorAnalyzer,
         # BSM particles that can appear with status <= 2 and should be kept
-        stableBSMParticleIds = { 1000022 }, 
+        stableBSMParticleIds = [ 1000022 ], 
         # Particles of which we want to save the pre-FSR momentum (a la status 3).
         # Note that for quarks and gluons the post-FSR doesn't make sense,
         # so those should always be in the list
-        savePreFSRParticleIds = { 1,2,3,4,5, 11,12,13,14,15,16, 21 },
+        savePreFSRParticleIds = [ 1,2,3,4,5, 11,12,13,14,15,16, 21 ],
         # Make also the list of all genParticles, for other analyzers to handle
         makeAllGenParticles = True,
         # Make also the splitted lists

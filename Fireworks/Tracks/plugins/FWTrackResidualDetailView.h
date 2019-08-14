@@ -23,6 +23,7 @@
 //      |mu = 0      DT  = 1            layer                             hit type = 0-3
 //      |mu = 0      CSC = 2            layer                             hit type = 0-3
 //      |mu = 0      RPC = 3            layer                             hit type = 0-3
+//      |mu = 0      GEM = 3            layer                             hit type = 0-3
 //
 //      hit type, see DataFormats/TrackingRecHit/interface/TrackingRecHit.h
 //      valid    = valid hit                                     = 0
@@ -40,45 +41,45 @@ class TEveWindowSlot;
 class TEveWindow;
 
 namespace reco {
-   class Track;
+  class Track;
 }
 
-class FWTrackResidualDetailView : public FWDetailViewCanvas<reco::Track>{
+class FWTrackResidualDetailView : public FWDetailViewCanvas<reco::Track> {
 public:
-   FWTrackResidualDetailView();
-   virtual ~FWTrackResidualDetailView();
+  FWTrackResidualDetailView();
+  ~FWTrackResidualDetailView() override;
 
 private:
-   FWTrackResidualDetailView(const FWTrackResidualDetailView&); // stop default
-   const FWTrackResidualDetailView& operator=(const FWTrackResidualDetailView&); // stop default
+  FWTrackResidualDetailView(const FWTrackResidualDetailView &) = delete;                   // stop default
+  const FWTrackResidualDetailView &operator=(const FWTrackResidualDetailView &) = delete;  // stop default
 
-   using FWDetailViewCanvas<reco::Track>::build;
-   virtual void build (const FWModelId &id, const reco::Track*);
-   using FWDetailViewCanvas<reco::Track>::setTextInfo;
-   virtual void setTextInfo(const FWModelId &id, const reco::Track*);
+  using FWDetailViewCanvas<reco::Track>::build;
+  void build(const FWModelId &id, const reco::Track *) override;
+  using FWDetailViewCanvas<reco::Track>::setTextInfo;
+  void setTextInfo(const FWModelId &id, const reco::Track *) override;
 
-   double getSignedResidual (const FWGeometry *geom, unsigned int id, double resX);
-   void prepareData(const FWModelId &id, const reco::Track*);
-   void printDebug();
+  double getSignedResidual(const FWGeometry *geom, unsigned int id, double resX);
+  void prepareData(const FWModelId &id, const reco::Track *);
+  void printDebug();
 
-   int m_ndet;
-   int m_nhits;
-   int m_det[64];
-   float res[2][64];
-   int hittype[64];
-   int stereo[64];
-   int substruct[64];
-   int subsubstruct[64];
-   int m_detector[64];
+  int m_ndet;
+  int m_nhits;
+  int m_det[64];
+  float res[2][64];
+  int hittype[64];
+  int stereo[64];
+  int substruct[64];
+  int subsubstruct[64];
+  int m_detector[64];
 
-   Int_t   m_resXFill;
-   Color_t m_resXCol;
-   Int_t   m_resYFill;
-   Color_t m_resYCol;
-   Int_t   m_stereoFill;
-   Color_t m_stereoCol;
-   Int_t   m_invalidFill;
-   Color_t m_invalidCol;
+  Int_t m_resXFill;
+  Color_t m_resXCol;
+  Int_t m_resYFill;
+  Color_t m_resYCol;
+  Int_t m_stereoFill;
+  Color_t m_stereoCol;
+  Int_t m_invalidFill;
+  Color_t m_invalidCol;
 
-   const static char* m_det_tracker_str[];
+  const static char *m_det_tracker_str[];
 };

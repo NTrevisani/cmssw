@@ -19,15 +19,13 @@
 #ifndef PhysicsTools_PatAlgos_PATMHTProducer_h
 #define PhysicsTools_PatAlgos_PATMHTProducer_h
 
-
-
 // system include files
 #include <memory>
 
 // user include files
 
 #include "FWCore/Framework/interface/Event.h"
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 
@@ -36,7 +34,6 @@
 #include "FWCore/ParameterSet/interface/FileInPath.h"
 #include "FWCore/Utilities/interface/InputTag.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
-
 
 #include "DataFormats/Candidate/interface/Candidate.h"
 #include "DataFormats/Common/interface/View.h"
@@ -47,7 +44,6 @@
 #include "DataFormats/PatCandidates/interface/Tau.h"
 #include "DataFormats/PatCandidates/interface/Electron.h"
 #include "DataFormats/PatCandidates/interface/Muon.h"
-
 
 #include "RecoMET/METAlgorithms/interface/SignAlgoResolutions.h"
 #include "RecoMET/METAlgorithms/interface/significanceAlgo.h"
@@ -61,21 +57,18 @@
 //
 
 namespace pat {
-  class PATMHTProducer : public edm::EDProducer {
+  class PATMHTProducer : public edm::stream::EDProducer<> {
   public:
     explicit PATMHTProducer(const edm::ParameterSet&);
-    ~PATMHTProducer();
+    ~PATMHTProducer() override;
 
   private:
-    virtual void beginJob() ;
-    virtual void produce(edm::Event&, const edm::EventSetup&) override;
-    virtual void endJob() ;
+    void produce(edm::Event&, const edm::EventSetup&) override;
 
     double getJets(edm::Event&, const edm::EventSetup&);
     double getElectrons(edm::Event&, const edm::EventSetup&);
     double getMuons(edm::Event&, const edm::EventSetup&);
-    void   getTowers(edm::Event&, const edm::EventSetup&);
-
+    void getTowers(edm::Event&, const edm::EventSetup&);
 
     // ----------member data ---------------------------
 
@@ -89,21 +82,20 @@ namespace pat {
     edm::EDGetTokenT<edm::View<pat::Tau> > tauToken_;
     edm::EDGetTokenT<edm::View<pat::Photon> > phoToken_;
 
-    std::vector<metsig::SigInputObj> physobjvector_ ;
+    std::vector<metsig::SigInputObj> physobjvector_;
 
-    double uncertaintyScaleFactor_; // scale factor for the uncertainty parameters.
-    bool    controlledUncertainty_; // use controlled uncertainty parameters.
-
+    double uncertaintyScaleFactor_;  // scale factor for the uncertainty parameters.
+    bool controlledUncertainty_;     // use controlled uncertainty parameters.
 
     //--- test the uncertainty parameters ---//
 
-    class uncertaintyFunctions{
+    class uncertaintyFunctions {
     public:
-      TF1 *etUncertainty;
-      TF1 *phiUncertainty;
+      std::unique_ptr<TF1> etUncertainty;
+      std::unique_ptr<TF1> phiUncertainty;
     };
 
-    void setUncertaintyParameters();// fills the following uncertaintyFunctions objects:
+    void setUncertaintyParameters();  // fills the following uncertaintyFunctions objects:
     uncertaintyFunctions ecalEBUncertainty;
     uncertaintyFunctions ecalEEUncertainty;
     uncertaintyFunctions hcalHBUncertainty;
@@ -144,23 +136,23 @@ namespace pat {
 
     //  double uncertaintyScaleFactor_; // scale factor for the uncertainty parameters.
 
-    double jetEtUncertaintyParameter0_ ;
-    double jetEtUncertaintyParameter1_ ;
-    double jetEtUncertaintyParameter2_ ;
+    double jetEtUncertaintyParameter0_;
+    double jetEtUncertaintyParameter1_;
+    double jetEtUncertaintyParameter2_;
 
-    double jetPhiUncertaintyParameter0_ ;
-    double jetPhiUncertaintyParameter1_ ;
-    double jetPhiUncertaintyParameter2_ ;
+    double jetPhiUncertaintyParameter0_;
+    double jetPhiUncertaintyParameter1_;
+    double jetPhiUncertaintyParameter2_;
 
-    double eleEtUncertaintyParameter0_ ;
-    double elePhiUncertaintyParameter0_ ;
+    double eleEtUncertaintyParameter0_;
+    double elePhiUncertaintyParameter0_;
 
-    double muonEtUncertaintyParameter0_ ;
-    double muonPhiUncertaintyParameter0_ ;
+    double muonEtUncertaintyParameter0_;
+    double muonPhiUncertaintyParameter0_;
 
     edm::InputTag CaloJetAlgorithmTag_;
     edm::InputTag CorJetAlgorithmTag_;
-    std::string   JetCorrectionService_;
+    std::string JetCorrectionService_;
     edm::InputTag MuonTag_;
     edm::InputTag ElectronTag_;
     edm::InputTag CaloTowerTag_;
@@ -171,13 +163,11 @@ namespace pat {
     //TrackDetectorAssociator   trackAssociator_;
     //TrackAssociatorParameters trackAssociatorParameters_;
 
-    double towerEtThreshold_ ;
-    bool useHO_ ;
-
-
+    double towerEtThreshold_;
+    bool useHO_;
   };
   //define this as a plug-in
 
-} //end of namespace
+}  // namespace pat
 
 #endif

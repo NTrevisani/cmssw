@@ -5,6 +5,7 @@ _RunMerge_
 Test/Debugging harness for the merge configuration builder
 
 """
+from __future__ import print_function
 
 
 
@@ -22,12 +23,14 @@ class RunMerge:
         self.outputLFN = None
         self.inputFiles = []
         self.newDQMIO = False
+        self.mergeNANO = False
+        self.bypassVersionCheck = False
         
 
     def __call__(self):
         if self.inputFiles == []:
             msg = "No Input Files provided"
-            raise RuntimeError, msg
+            raise RuntimeError(msg)
 
         try:
             process = mergeProcess(
@@ -35,30 +38,32 @@ class RunMerge:
                 process_name = self.processName,
                 output_file = self.outputFile,
                 output_lfn = self.outputLFN,
-                newDQMIO = self.newDQMIO)
-        except Exception, ex:
+                newDQMIO = self.newDQMIO,
+                mergeNANO = self.mergeNANO,
+                bypassVersionCheck = self.bypassVersionCheck)
+        except Exception as ex:
             msg = "Error creating process for Merge:\n"
             msg += str(ex)
-            raise RuntimeError, msg
+            raise RuntimeError(msg)
 
         psetFile = open("RunMergeCfg.py", "w")
         psetFile.write(process.dumpPython())
         psetFile.close()
         cmsRun = "cmsRun -j FrameworkJobReport.xml RunMergeCfg.py"
-        print "Now do:\n%s" % cmsRun
+        print("Now do:\n%s" % cmsRun)
         
                 
 
 
 if __name__ == '__main__':
-    valid = ["input-files=", "output-file=", "output-lfn=", "dqmroot" ]
+    valid = ["input-files=", "output-file=", "output-lfn=", "dqmroot", "mergeNANO", "bypassVersionCheck" ]
              
     usage = """RunMerge.py <options>"""
     try:
         opts, args = getopt.getopt(sys.argv[1:], "", valid)
-    except getopt.GetoptError, ex:
-        print usage
-        print str(ex)
+    except getopt.GetoptError as ex:
+        print(usage)
+        print(str(ex))
         sys.exit(1)
 
 
@@ -75,6 +80,9 @@ if __name__ == '__main__':
             merger.outputLFN = arg
         if opt == "--dqmroot" :
             merger.newDQMIO = True
-        
+        if opt == "--mergeNANO" :
+            merger.mergeNANO = True
+        if opt == "--bypassVersionCheck" :
+            merger.bypassVersionCheck = True
 
     merger()

@@ -8,7 +8,6 @@
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "CondCore/DBOutputService/interface/PoolDBOutputService.h"
-#include "CondCore/DBCommon/interface/Time.h"
 
 #include "FWCore/Utilities/interface/Exception.h"
 
@@ -17,18 +16,15 @@
 class SiStripFedCabling;
 
 class SiStripFedCablingManipulator : public edm::EDAnalyzer {
-
 public:
-
   explicit SiStripFedCablingManipulator(const edm::ParameterSet& iConfig);
-  ~SiStripFedCablingManipulator();
-  void analyze(const edm::Event& e, const edm::EventSetup&es){};
+  ~SiStripFedCablingManipulator() override;
+  void analyze(const edm::Event& e, const edm::EventSetup& es) override{};
 
-  void endRun(const edm::Run & run, const edm::EventSetup & es);
+  void endRun(const edm::Run& run, const edm::EventSetup& es) override;
 
- private:
-
-  void manipulate(const SiStripFedCabling*,SiStripFedCabling*&);
+private:
+  void manipulate(const SiStripFedCabling*, SiStripFedCabling*&);
 
   edm::ParameterSet iConfig_;
 };

@@ -9,7 +9,8 @@ ecalRecHit = cms.EDProducer("EcalRecHitProducer",
     EBuncalibRecHitCollection = cms.InputTag("ecalMultiFitUncalibRecHit","EcalUncalibRecHitsEB"),
     EBrechitCollection = cms.string('EcalRecHitsEB'),
     # db statuses to be exluded from reconstruction (some will be recovered)
-    ChannelStatusToBeExcluded = cms.vstring(   'kNoisy',
+    ChannelStatusToBeExcluded = cms.vstring(   'kDAC',
+                                               'kNoisy',
                                                'kNNoisy',
                                                'kFixedG6',
                                                'kFixedG1',
@@ -29,6 +30,8 @@ ecalRecHit = cms.EDProducer("EcalRecHitProducer",
     EBLaserMAX = cms.double(3.0),
     EELaserMAX = cms.double(8.0),
 
+    # useful if time is not calculated, as at HLT                        
+    skipTimeCalib = cms.bool(False),                         
 
     # apply laser corrections
     laserCorrection = cms.bool(True),
@@ -46,7 +49,7 @@ ecalRecHit = cms.EDProducer("EcalRecHitProducer",
                             
     # for channel recovery
     algoRecover = cms.string("EcalRecHitWorkerRecover"),
-    recoverEBIsolatedChannels = cms.bool(False),
+    recoverEBIsolatedChannels = cms.bool(False),##default is false
     recoverEEIsolatedChannels = cms.bool(False),
     recoverEBVFE  = cms.bool(False),
     recoverEEVFE  = cms.bool(False),
@@ -73,9 +76,21 @@ ecalRecHit = cms.EDProducer("EcalRecHitProducer",
     eeDetIdToBeRecovered = cms.InputTag("ecalDetIdToBeRecovered:eeDetId"),
     ebFEToBeRecovered = cms.InputTag("ecalDetIdToBeRecovered:ebFE"),
     eeFEToBeRecovered = cms.InputTag("ecalDetIdToBeRecovered:eeFE"),
-    singleChannelRecoveryMethod = cms.string("NeuralNetworks"),
-    singleChannelRecoveryThreshold = cms.double(8),
+    singleChannelRecoveryMethod = cms.string("BDTG"),
+    singleChannelRecoveryThreshold = cms.double(0.70), #Threshold in GeV
+    sum8ChannelRecoveryThreshold = cms.double(0.),     #Threshold in GeV
+    bdtWeightFileNoCracks = cms.FileInPath("RecoLocalCalo/EcalDeadChannelRecoveryAlgos/data/BDTWeights/bdtgAllRH_8GT700MeV_noCracks_ZskimData2017_v1.xml"),
+    bdtWeightFileCracks = cms.FileInPath("RecoLocalCalo/EcalDeadChannelRecoveryAlgos/data/BDTWeights/bdtgAllRH_8GT700MeV_onlyCracks_ZskimData2017_v1.xml"),
     triggerPrimitiveDigiCollection = cms.InputTag("ecalDigis:EcalTriggerPrimitives"),
     cleaningConfig=cleaningAlgoConfig,
 
     )
+
+from Configuration.Eras.Modifier_fastSim_cff import fastSim
+# no flags for bad channels in FastSim
+fastSim.toModify(ecalRecHit, 
+                 killDeadChannels = False,
+                 recoverEBFE = False,
+                 recoverEEFE = False,
+                 recoverEBIsolatedChannels = False
+                  )

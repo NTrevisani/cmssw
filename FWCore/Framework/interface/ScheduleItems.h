@@ -3,6 +3,7 @@
 
 #include "FWCore/ServiceRegistry/interface/ServiceLegacy.h"
 #include "FWCore/ServiceRegistry/interface/ServiceToken.h"
+#include "FWCore/Utilities/interface/get_underlying_safe.h"
 
 #include <memory>
 #include <vector>
@@ -22,43 +23,60 @@ namespace edm {
   class SignallingProductRegistry;
   class StreamID;
   class PreallocationConfiguration;
+  class SubProcessParentageHelper;
 
   struct ScheduleItems {
     ScheduleItems();
 
     ScheduleItems(ProductRegistry const& preg, SubProcess const& om);
 
-    ScheduleItems(ScheduleItems const&) = delete; // Disallow copying and moving
-    ScheduleItems& operator=(ScheduleItems const&) = delete; // Disallow copying and moving
+    ScheduleItems(ScheduleItems const&) = delete;             // Disallow copying and moving
+    ScheduleItems& operator=(ScheduleItems const&) = delete;  // Disallow copying and moving
 
-    ServiceToken
-    initServices(std::vector<ParameterSet>& servicePSets,
-                 ParameterSet& processPSet,
-                 ServiceToken const& iToken,
-                 serviceregistry::ServiceLegacy iLegacy,
-                 bool associate);
+    ServiceToken initServices(std::vector<ParameterSet>& servicePSets,
+                              ParameterSet& processPSet,
+                              ServiceToken const& iToken,
+                              serviceregistry::ServiceLegacy iLegacy,
+                              bool associate);
 
-    ServiceToken
-    addCPRandTNS(ParameterSet const& parameterSet, ServiceToken const& token);
+    ServiceToken addCPRandTNS(ParameterSet const& parameterSet, ServiceToken const& token);
 
-    std::shared_ptr<CommonParams>
-    initMisc(ParameterSet& parameterSet);
+    std::shared_ptr<CommonParams> initMisc(ParameterSet& parameterSet);
 
-    std::auto_ptr<Schedule>
-    initSchedule(ParameterSet& parameterSet,
-                 ParameterSet const* subProcessPSet,
-                 PreallocationConfiguration const& iAllocConfig,
-                 ProcessContext const*);
+    std::unique_ptr<Schedule> initSchedule(ParameterSet& parameterSet,
+                                           bool hasSubprocesses,
+                                           PreallocationConfiguration const& iAllocConfig,
+                                           ProcessContext const*);
 
-    void
-    clear();
+    void clear();
 
-    std::shared_ptr<ActivityRegistry> actReg_;
-    std::unique_ptr<SignallingProductRegistry> preg_;
-    std::shared_ptr<BranchIDListHelper> branchIDListHelper_;
-    std::shared_ptr<ThinnedAssociationsHelper> thinnedAssociationsHelper_;
+    std::shared_ptr<SignallingProductRegistry const> preg() const { return get_underlying_safe(preg_); }
+    std::shared_ptr<SignallingProductRegistry>& preg() { return get_underlying_safe(preg_); }
+    std::shared_ptr<BranchIDListHelper const> branchIDListHelper() const {
+      return get_underlying_safe(branchIDListHelper_);
+    }
+    std::shared_ptr<BranchIDListHelper>& branchIDListHelper() { return get_underlying_safe(branchIDListHelper_); }
+    std::shared_ptr<ThinnedAssociationsHelper const> thinnedAssociationsHelper() const {
+      return get_underlying_safe(thinnedAssociationsHelper_);
+    }
+    std::shared_ptr<ThinnedAssociationsHelper>& thinnedAssociationsHelper() {
+      return get_underlying_safe(thinnedAssociationsHelper_);
+    }
+    std::shared_ptr<SubProcessParentageHelper>& subProcessParentageHelper() {
+      return get_underlying_safe(subProcessParentageHelper_);
+    }
+    std::shared_ptr<ProcessConfiguration const> processConfiguration() const {
+      return get_underlying_safe(processConfiguration_);
+    }
+    std::shared_ptr<ProcessConfiguration>& processConfiguration() { return get_underlying_safe(processConfiguration_); }
+
+    std::shared_ptr<ActivityRegistry> actReg_;  // We do not use propagate_const because the registry itself is mutable.
+    edm::propagate_const<std::shared_ptr<SignallingProductRegistry>> preg_;
+    edm::propagate_const<std::shared_ptr<BranchIDListHelper>> branchIDListHelper_;
+    edm::propagate_const<std::shared_ptr<ThinnedAssociationsHelper>> thinnedAssociationsHelper_;
+    edm::propagate_const<std::shared_ptr<SubProcessParentageHelper>> subProcessParentageHelper_;
     std::unique_ptr<ExceptionToActionTable const> act_table_;
-    std::shared_ptr<ProcessConfiguration> processConfiguration_;
+    edm::propagate_const<std::shared_ptr<ProcessConfiguration>> processConfiguration_;
   };
-}
+}  // namespace edm
 #endif

@@ -2,7 +2,7 @@
 //
 // Package:    GeometricDetAnalyzer
 // Class:      GeometricDetAnalyzer
-// 
+//
 /**\class GeometricDetAnalyzer GeometricDetAnalyzer.cc test/GeometricDetAnalyzer/src/GeometricDetAnalyzer.cc
 
  Description: <one line class summary>
@@ -16,13 +16,12 @@
 //
 //
 
-
 // system include files
 #include <memory>
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "FWCore/Framework/interface/one/EDAnalyzer.h"
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -45,15 +44,14 @@
 // class decleration
 //
 
-class GeometricDetAnalyzer : public edm::EDAnalyzer {
-   public:
-      explicit GeometricDetAnalyzer( const edm::ParameterSet& );
-      ~GeometricDetAnalyzer();
+class GeometricDetAnalyzer : public edm::one::EDAnalyzer<> {
+public:
+  explicit GeometricDetAnalyzer(const edm::ParameterSet&);
+  ~GeometricDetAnalyzer() override;
 
-
-      virtual void analyze( const edm::Event&, const edm::EventSetup& );
-   private:
-      // ----------member data ---------------------------
+  void beginJob() override {}
+  void analyze(edm::Event const& iEvent, edm::EventSetup const&) override;
+  void endJob() override {}
 };
 
 //
@@ -67,59 +65,49 @@ class GeometricDetAnalyzer : public edm::EDAnalyzer {
 //
 // constructors and destructor
 //
-GeometricDetAnalyzer::GeometricDetAnalyzer( const edm::ParameterSet& iConfig )
-{
-   //now do what ever initialization is needed
-
+GeometricDetAnalyzer::GeometricDetAnalyzer(const edm::ParameterSet& iConfig) {
+  //now do what ever initialization is needed
 }
 
-
-GeometricDetAnalyzer::~GeometricDetAnalyzer()
-{
- 
-   // do anything here that needs to be done at desctruction time
-   // (e.g. close files, deallocate resources etc.)
-
+GeometricDetAnalyzer::~GeometricDetAnalyzer() {
+  // do anything here that needs to be done at desctruction time
+  // (e.g. close files, deallocate resources etc.)
 }
-
 
 //
 // member functions
 //
 
 // ------------ method called to produce the data  ------------
-void
-GeometricDetAnalyzer::analyze( const edm::Event& iEvent, const edm::EventSetup& iSetup )
-{
-   using namespace edm;
+void GeometricDetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
+  using namespace edm;
 
-   edm::LogInfo("GeometricDetAnalyzer")<< "Here I am ";
-   //
-   // get the GeometricDet
-   //
-   edm::ESHandle<GeometricDet> pDD;
-   iSetup.get<IdealGeometryRecord>().get( pDD );     
-   edm::LogInfo("GeometricDetAnalyzer")<< " Top node is  "<< pDD.product();   
-   edm::LogInfo("GeometricDetAnalyzer")<< " And Contains  Daughters: "<< pDD->deepComponents().size();   
-   std::vector<const GeometricDet*> det = pDD->deepComponents();   
-   for(std::vector<const GeometricDet*>::iterator it = det.begin();it!=det.end();it++){
-     DDRotationMatrix res = (*it)->rotation();
-     DD3Vector x, y, z;
-     res.GetComponents(x, y, z);
-     DD3Vector colx(x.X(),x.Y(),x.Z());
-     DD3Vector coly(y.X(),y.Y(),y.Z());
-     DD3Vector colz(z.X(),z.Y(),z.Z());
+  edm::LogInfo("GeometricDetAnalyzer") << "Here I am ";
+  //
+  // get the GeometricDet
+  //
+  edm::ESHandle<GeometricDet> pDD;
+  iSetup.get<IdealGeometryRecord>().get(pDD);
+  edm::LogInfo("GeometricDetAnalyzer") << " Top node is  " << pDD.product();
+  edm::LogInfo("GeometricDetAnalyzer") << " And Contains  Daughters: " << pDD->deepComponents().size();
+  std::vector<const GeometricDet*> det = pDD->deepComponents();
+  for (auto& it : det) {
+    const DDRotationMatrix& res = it->rotation();
+    DD3Vector x, y, z;
+    res.GetComponents(x, y, z);
+    DD3Vector colx(x.X(), x.Y(), x.Z());
+    DD3Vector coly(y.X(), y.Y(), y.Z());
+    DD3Vector colz(z.X(), z.Y(), z.Z());
 
-     DDRotationMatrix result(colx,coly,colz);
+    DDRotationMatrix result(colx, coly, colz);
 
-     DD3Vector cx, cy, cz;
-     result.GetComponents(cx, cy, cz);
-     if (cx.Cross(cy).Dot(cz) < 0.5){
-       edm::LogInfo("GeometricDetAnalyzer") <<"Left Handed Rotation Matrix detected; making it right handed: "<<(*it)->name();
-     }
-   }
-
-
+    DD3Vector cx, cy, cz;
+    result.GetComponents(cx, cy, cz);
+    if (cx.Cross(cy).Dot(cz) < 0.5) {
+      edm::LogInfo("GeometricDetAnalyzer")
+          << "Left Handed Rotation Matrix detected; making it right handed: " << it->name();
+    }
+  }
 }
 
 //define this as a plug-in

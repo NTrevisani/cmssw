@@ -5,23 +5,18 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FastSimulation/TrackerSetup/interface/TrackerInteractionGeometryRecord.h"
 #include "FastSimulation/TrackerSetup/interface/TrackerInteractionGeometry.h"
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <string>
 
-class  TrackerInteractionGeometryESProducer: public edm::ESProducer{
- public:
-  TrackerInteractionGeometryESProducer(const edm::ParameterSet & p);
-  virtual ~TrackerInteractionGeometryESProducer(); 
-  boost::shared_ptr<TrackerInteractionGeometry> produce(const TrackerInteractionGeometryRecord &);
- private:
-  boost::shared_ptr<TrackerInteractionGeometry> _tracker;
+class TrackerInteractionGeometryESProducer : public edm::ESProducer {
+public:
+  TrackerInteractionGeometryESProducer(const edm::ParameterSet &p);
+  ~TrackerInteractionGeometryESProducer() override;
+  std::unique_ptr<TrackerInteractionGeometry> produce(const TrackerInteractionGeometryRecord &);
+
+private:
   std::string _label;
   edm::ParameterSet theTrackerMaterial;
 };
 
-
 #endif
-
-
-
-

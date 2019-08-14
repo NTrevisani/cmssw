@@ -4,18 +4,17 @@
 #include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
 #include "SimDataFormats/CrossingFrame/interface/CrossingFrame.h"
 #include <string>
-#include "FastSimulation/Particle/interface/ParticleTable.h"
 
 namespace HepMC {
   class GenEvent;
 }
 
-namespace edm { 
+namespace edm {
   class ParameterSet;
   class EventSetup;
   class Run;
   class HepMCProduct;
-}
+}  // namespace edm
 
 class FSimEvent;
 class TrajectoryManager;
@@ -27,61 +26,42 @@ class TrackerTopology;
 
 // using trailing _ for private data members, m_p prefix for PSet variables (MSt)
 
-class FamosManager
-{
- public:
-
-
+class FamosManager {
+public:
   /// Constructor
-  FamosManager(edm::ParameterSet const & p);
+  FamosManager(edm::ParameterSet const& p);
 
   /// Destructor
   ~FamosManager();
 
   /// Get information from the Event Setup
-  void setupGeometryAndField(edm::Run const& run, const edm::EventSetup & es);
+  void setupGeometryAndField(edm::Run const& run, const edm::EventSetup& es);
 
-  /// The generated event
-  //  const HepMC::GenEvent* genEvent() const { return myGenEvent; };
-  //  const reco::CandidateCollection*
-
-  /// The simulated event 
+  /// The simulated event
   FSimEvent* simEvent() const { return mySimEvent; }
 
   /// The real thing is done here
-  void reconstruct(const HepMC::GenEvent* evt, 
-		   const reco::GenParticleCollection* particles,
-		   const HepMC::GenEvent* pu,
-		   const TrackerTopology *tTopo,
-                   RandomEngineAndDistribution const*);
-  
-  void reconstruct(const reco::GenParticleCollection* particles,
-		   const TrackerTopology *tTopo,
-                   RandomEngineAndDistribution const*);
+  void reconstruct(const HepMC::GenEvent* evt, const TrackerTopology* tTopo, RandomEngineAndDistribution const*);
 
-  /// The tracker 
-  TrajectoryManager * trackerManager() const {return myTrajectoryManager;}
+  /// The tracker
+  TrajectoryManager* trackerManager() const { return myTrajectoryManager; }
 
-  /// The calorimeter 
-  CalorimetryManager * calorimetryManager() const {return myCalorimetry;}
-  
-  
- private:   
+  /// The calorimeter
+  CalorimetryManager* calorimetryManager() const { return myCalorimetry; }
 
+private:
   int iEvent;
   //  const HepMC::GenEvent* myGenEvent;
   FSimEvent* mySimEvent;
   TrajectoryManager* myTrajectoryManager;
-  PileUpSimulator* myPileUpSimulator;
-  CalorimetryManager * myCalorimetry;
+  CalorimetryManager* myCalorimetry;
 
- private:
-
+private:
   bool m_pUseMagneticField;
   bool m_Tracking;
   bool m_Calorimetry;
   bool m_Alignment;
-  double weight_;    
+  double weight_;
   int m_pRunNumber;
   int m_pVerbose;
 };

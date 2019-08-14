@@ -11,25 +11,17 @@
  *  velocity and Xs=X0*h(Z).
  */
 
-class GsfMultipleScatteringUpdator GCC11_FINAL : public GsfMaterialEffectsUpdator {
-
+class GsfMultipleScatteringUpdator final : public GsfMaterialEffectsUpdator {
 public:
-
   /// constructor with explicit mass
-  GsfMultipleScatteringUpdator(float mass) :
-    GsfMaterialEffectsUpdator(mass,2) {}
-  
-  virtual GsfMultipleScatteringUpdator* clone() const
-  {
-    return new GsfMultipleScatteringUpdator(*this);
-  }
-  
+  GsfMultipleScatteringUpdator(float mass) : GsfMaterialEffectsUpdator(mass, 2) {}
+
+  GsfMultipleScatteringUpdator* clone() const override { return new GsfMultipleScatteringUpdator(*this); }
+
   /// Computation: generates vectors of weights, means and standard deviations
-  virtual void compute (const TrajectoryStateOnSurface&, const PropagationDirection, Effect[]) const;
+  void compute(const TrajectoryStateOnSurface&, const PropagationDirection, Effect[]) const override;
 
-  virtual size_t size() const { return 2;}
-  
-
+  virtual size_t size() const { return 2; }
 };
 
 #endif

@@ -3,7 +3,7 @@
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "FWCore/Framework/interface/one/EDAnalyzer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
@@ -16,69 +16,38 @@
 
 using namespace std;
 
-//
-//
-// class decleration
-//
+class TrackerRecoGeometryAnalyzer : public edm::one::EDAnalyzer<> {
+public:
+  TrackerRecoGeometryAnalyzer(const edm::ParameterSet&);
+  ~TrackerRecoGeometryAnalyzer();
 
-class TrackerRecoGeometryAnalyzer : public edm::EDAnalyzer {
-   public:
-      explicit TrackerRecoGeometryAnalyzer( const edm::ParameterSet& );
-      ~TrackerRecoGeometryAnalyzer();
-
-
-      virtual void analyze( const edm::Event&, const edm::EventSetup& );
+  void beginJob() override {}
+  void analyze(edm::Event const& iEvent, edm::EventSetup const&) override;
+  void endJob() override {}
 };
 
+TrackerRecoGeometryAnalyzer::TrackerRecoGeometryAnalyzer(const edm::ParameterSet& iConfig) {}
 
-// constructors and destructor
-//
-TrackerRecoGeometryAnalyzer::TrackerRecoGeometryAnalyzer( const edm::ParameterSet& iConfig )
-{
-   //now do what ever initialization is needed
+TrackerRecoGeometryAnalyzer::~TrackerRecoGeometryAnalyzer() {}
 
+void TrackerRecoGeometryAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
+  using namespace edm;
+
+  //
+  // get the GeometricSearchDet
+  //
+  edm::ESHandle<GeometricSearchTracker> track;
+  iSetup.get<TrackerRecoGeometryRecord>().get(track);
+
+  //---- testing access to barrelLayers ----
+  vector<const BarrelDetLayer*> theBarrelLayers = track->barrelLayers();
+  edm::LogInfo("TrackerRecoGeometryAnalyzer") << "number of BarrelLayers: " << theBarrelLayers.size();
+
+  for (unsigned int i = 0; i < 3; i++) {
+    const BarrelDetLayer* theLayer = theBarrelLayers[i];
+    edm::LogInfo("TrackerRecoGeometryAnalyzer")
+        << "theLayer[" << i << "]->position().perp(): " << theLayer->components().front()->surface().position().perp();
+  }
 }
 
-
-TrackerRecoGeometryAnalyzer::~TrackerRecoGeometryAnalyzer()
-{
- 
-   // do anything here that needs to be done at desctruction time
-   // (e.g. close files, deallocate resources etc.)
-
-}
-
-
-//
-// member functions
-//
-
-// ------------ method called to produce the data  ------------
-void
-TrackerRecoGeometryAnalyzer::analyze( const edm::Event& iEvent, const edm::EventSetup& iSetup )
-{
-   using namespace edm;
-
-   //
-   // get the GeometricSearchDet
-   //
-   edm::ESHandle<GeometricSearchTracker> track;
-   iSetup.get<TrackerRecoGeometryRecord>().get( track );     
-   
-   //---- testing access to barrelLayers ----
-   vector<const BarrelDetLayer*> theBarrelLayers = track->barrelLayers();
-   edm::LogInfo("analyzer") << "number of BarrelLayers: " << theBarrelLayers.size() ;
-
-   for(unsigned int i=0; i<3; i++){
-     const BarrelDetLayer* theLayer = theBarrelLayers[i];   
-     edm::LogInfo("analyzer") << "theLayer[" << i << "]->position().perp(): " 
-	  << theLayer->components().front()->surface().position().perp() ;     
-   }   
-   //--------------------------------------
-
-}
-
-//define this as a plug-in
 DEFINE_FWK_MODULE(TrackerRecoGeometryAnalyzer);
- 
- 

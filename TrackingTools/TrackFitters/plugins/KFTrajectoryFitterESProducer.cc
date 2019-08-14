@@ -1,8 +1,3 @@
-#include "TrackingTools/TrackFitters/plugins/KFTrajectoryFitterESProducer.h"
-#include "MagneticField/Engine/interface/MagneticField.h"
-#include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
-
-#include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/ModuleFactory.h"
 #include "FWCore/Framework/interface/ESProducer.h"
@@ -12,45 +7,59 @@
 #include "TrackingTools/PatternTools/interface/TrajectoryStateUpdator.h"
 #include "TrackingTools/KalmanUpdators/interface/Chi2MeasurementEstimatorBase.h"
 
-#include <string>
+#include "FWCore/Framework/interface/ESProducer.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
+#include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
+
+#include "TrackingTools/TrackFitters/interface/TrajectoryFitterRecord.h"
+#include "TrackingTools/Records/interface/TrackingComponentsRecord.h"
+#include "TrackingTools/TrackFitters/interface/KFTrajectoryFitter.h"
 #include <memory>
 
-using namespace edm;
+namespace {
 
-KFTrajectoryFitterESProducer::KFTrajectoryFitterESProducer(const edm::ParameterSet & p) 
-{
-  std::string myname = p.getParameter<std::string>("ComponentName");
-  pset_ = p;
-  setWhatProduced(this,myname);
-}
+  class KFTrajectoryFitterESProducer : public edm::ESProducer {
+  public:
+    KFTrajectoryFitterESProducer(const edm::ParameterSet& p);
+    std::unique_ptr<TrajectoryFitter> produce(const TrajectoryFitterRecord&);
 
-KFTrajectoryFitterESProducer::~KFTrajectoryFitterESProducer() {}
+    static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+      edm::ParameterSetDescription desc;
+      desc.add<std::string>("ComponentName", "KFFitter");
+      desc.add<std::string>("Propagator", "PropagatorWithMaterial");
+      desc.add<std::string>("Updator", "KFUpdator");
+      desc.add<std::string>("Estimator", "Chi2");
+      desc.add<std::string>("RecoGeometry", "GlobalDetLayerGeometry");
+      desc.add<int>("minHits", 3);
+      descriptions.add("KFTrajectoryFitter", desc);
+    }
 
-boost::shared_ptr<TrajectoryFitter> 
-KFTrajectoryFitterESProducer::produce(const TrajectoryFitterRecord & iRecord){ 
+  private:
+    edm::ESGetToken<Propagator, TrackingComponentsRecord> propToken_;
+    edm::ESGetToken<TrajectoryStateUpdator, TrackingComponentsRecord> updToken_;
+    edm::ESGetToken<Chi2MeasurementEstimatorBase, TrackingComponentsRecord> estToken_;
+    edm::ESGetToken<DetLayerGeometry, RecoGeometryRecord> geoToken_;
+    const int minHits_;
+  };
 
-  std::string pname = pset_.getParameter<std::string>("Propagator");
-  std::string uname = pset_.getParameter<std::string>("Updator");
-  std::string ename = pset_.getParameter<std::string>("Estimator");
-  std::string gname = pset_.getParameter<std::string>("RecoGeometry");
-  int minHits = pset_.getParameter<int>("minHits");
+  KFTrajectoryFitterESProducer::KFTrajectoryFitterESProducer(const edm::ParameterSet& p)
+      : minHits_{p.getParameter<int>("minHits")} {
+    std::string myname = p.getParameter<std::string>("ComponentName");
+    setWhatProduced(this, myname)
+        .setConsumes(propToken_, edm::ESInputTag("", p.getParameter<std::string>("Propagator")))
+        .setConsumes(updToken_, edm::ESInputTag("", p.getParameter<std::string>("Updator")))
+        .setConsumes(estToken_, edm::ESInputTag("", p.getParameter<std::string>("Estimator")))
+        .setConsumes(geoToken_, edm::ESInputTag("", p.getParameter<std::string>("RecoGeometry")));
+  }
 
-  edm::ESHandle<Propagator> prop;
-  edm::ESHandle<TrajectoryStateUpdator> upd;
-  edm::ESHandle<Chi2MeasurementEstimatorBase> est;
-  edm::ESHandle<DetLayerGeometry> geo;
+  std::unique_ptr<TrajectoryFitter> KFTrajectoryFitterESProducer::produce(const TrajectoryFitterRecord& iRecord) {
+    return std::make_unique<KFTrajectoryFitter>(
+        &iRecord.get(propToken_), &iRecord.get(updToken_), &iRecord.get(estToken_), minHits_, &iRecord.get(geoToken_));
+  }
 
-  iRecord.getRecord<TrackingComponentsRecord>().get(pname, prop);
-  iRecord.getRecord<TrackingComponentsRecord>().get(uname, upd);
-  iRecord.getRecord<TrackingComponentsRecord>().get(ename, est);
-  iRecord.getRecord<RecoGeometryRecord>().get(gname,geo);
+}  // namespace
 
-  _fitter  = boost::shared_ptr<TrajectoryFitter>(new KFTrajectoryFitter(prop.product(),
-									upd.product(),
-									est.product(),
-									minHits,
-  									geo.product() ));
-  return _fitter;
-}
+#include "FWCore/Framework/interface/ModuleFactory.h"
 
-
+DEFINE_FWK_EVENTSETUP_MODULE(KFTrajectoryFitterESProducer);

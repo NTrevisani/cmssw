@@ -1,3 +1,4 @@
+from builtins import range
 import os.path
 import logging
 import math
@@ -243,7 +244,7 @@ class TabController(QObject):
         message=""
         try:  
             good=self.writeFile(filename)
-        except Exception,e:
+        except Exception as e:
             good=False
             message="\n"+str(e)
         if good:

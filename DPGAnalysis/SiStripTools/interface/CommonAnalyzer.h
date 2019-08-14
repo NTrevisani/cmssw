@@ -10,9 +10,8 @@ class TNamed;
 class TH1F;
 
 class CommonAnalyzer {
-
- public:
-  CommonAnalyzer(TFile* file, const char* run, const char* mod, const char* path ="", const char* prefix="");
+public:
+  CommonAnalyzer(TFile* file, const char* run, const char* mod, const char* path = "", const char* prefix = "");
   CommonAnalyzer(const CommonAnalyzer& dtca);
 
   CommonAnalyzer& operator=(const CommonAnalyzer& dtca);
@@ -29,23 +28,21 @@ class CommonAnalyzer {
   const std::string& getPrefix() const;
 
   const std::vector<unsigned int> getRunList() const;
+  const std::vector<unsigned int> getFillList() const;
 
   TObject* getObject(const char* name) const;
-  TNamed* getObjectWithSuffix(const char* name, const char* suffix="") const;
+  TNamed* getObjectWithSuffix(const char* name, const char* suffix = "") const;
 
-  TH1F* getBinomialRatio(const CommonAnalyzer& denom, const char* name, const int rebin=-1) const;
+  TH1F* getBinomialRatio(const CommonAnalyzer& denom, const char* name, const int rebin = -1) const;
 
- private:
-
+private:
+  const std::vector<unsigned int> getList(const char* what) const;
 
   TFile* _file;
   std::string _runnumber;
   std::string _module;
   std::string _path;
   std::string _prefix;
-
 };
 
-
-
-#endif // CommonAnalyzer_h
+#endif  // CommonAnalyzer_h

@@ -2,6 +2,7 @@
 
 # A Pyrelval Wrapper
 
+from __future__ import print_function
 import optparse
 import sys
 import os
@@ -9,7 +10,11 @@ import re
 import Configuration.Applications
 from Configuration.Applications.ConfigBuilder import ConfigBuilder, defaultOptions
 import traceback
+from functools import reduce
 
+def checkModifier(era):
+    from FWCore.ParameterSet.Config import Modifier, ModifierChain
+    return isinstance( era, Modifier ) or isinstance( era, ModifierChain )
 
 def checkOptions():
     return
@@ -49,7 +54,7 @@ def OptionsFromItems(items):
         from Configuration.AlCa import autoCond
         possible=""
         for k in autoCond.autoCond:
-            possible+="\nauto:"+k+" -> "+autoCond.autoCond[k]
+            possible+="\nauto:"+k+" -> "+str(autoCond.autoCond[k])
         raise Exception("the --conditions option is mandatory. Possibilities are: "+possible)
 
 
@@ -59,7 +64,7 @@ def OptionsFromItems(items):
 
     # check in case of ALCAOUTPUT case for alca splitting
     if options.triggerResultsProcess == None and "ALCAOUTPUT" in options.step:
-        print "ERROR: If ALCA splitting is requested, the name of the process in which the alca producers ran needs to be specified. E.g. via --triggerResultsProcess RECO"
+        print("ERROR: If ALCA splitting is requested, the name of the process in which the alca producers ran needs to be specified. E.g. via --triggerResultsProcess RECO")
         sys.exit(1)
             
     if not options.evt_type:            
@@ -83,8 +88,6 @@ def OptionsFromItems(items):
                  "SIM":"GEN",
                  "reSIM":"SIM",
                  "DIGI":"SIM",
-                 "DIGIPREMIX":"SIM",
-                 "DIGIPREMIX_S2":"SIM",
                  "reDIGI":"DIGI",
                  "L1REPACK":"RAW",
                  "HLT":"RAW",
@@ -99,7 +102,9 @@ def OptionsFromItems(items):
                  "DIGI2RAW":"DATAMIX",
                  "HARVESTING":"RECO",
                  "ALCAHARVEST":"RECO",
-                 "PAT":"RECO"}
+                 "PAT":"RECO",
+                 "NANO":"PAT",
+                 "PATGEN":"GEN"}
 
     trimmedEvtType=options.evt_type.split('/')[-1]
 
@@ -141,7 +146,7 @@ def OptionsFromItems(items):
         if options.filein.lower().endswith(".lhe") or options.filein.lower().endswith(".lhef") or options.filein.startswith("lhe:"):
             options.filetype="LHE"
         elif options.filein.startswith("mcdb:"):
-            print "This is a deprecated way of selecting lhe files from article number. Please use lhe:article argument to --filein"
+            print("This is a deprecated way of selecting lhe files from article number. Please use lhe:article argument to --filein")
             options.filein=options.filein.replace('mcdb:','lhe:')
             options.filetype="LHE"
         else:
@@ -171,7 +176,7 @@ def OptionsFromItems(items):
     if not options.python_filename:
         options.python_filename = standardFileName+'.py'
 
-    print options.step
+    print(options.step)
 
 
     # Setting name of process
@@ -201,6 +206,10 @@ def OptionsFromItems(items):
 
     # if not specified by user try to guess whether MC or DATA
     if not options.isData and not options.isMC:
+        if 'LHE' in options.trimmedStep or 'LHE' in options.datatier:
+            options.isMC=True
+        if 'GEN' in options.trimmedStep or 'GEN' in options.datatier:
+            options.isMC=True
         if 'SIM' in options.trimmedStep:
             options.isMC=True
         if 'CFWRITER' in options.trimmedStep:
@@ -214,9 +223,9 @@ def OptionsFromItems(items):
         if 'SIM' in options.datatier:
             options.isMC=True
         if options.isMC:
-            print 'We have determined that this is simulation (if not, rerun cmsDriver.py with --data)'
+            print('We have determined that this is simulation (if not, rerun cmsDriver.py with --data)')
         else:
-            print 'We have determined that this is real data (if not, rerun cmsDriver.py with --mc)'
+            print('We have determined that this is real data (if not, rerun cmsDriver.py with --mc)')
 
     if options.profile:
         if options.profile and options.prefix:
@@ -240,24 +249,29 @@ def OptionsFromItems(items):
     # If an "era" argument was supplied make sure it is one of the valid possibilities
     if options.era :
         from Configuration.StandardSequences.Eras import eras
-        from FWCore.ParameterSet.Config import Modifier, ModifierChain
         # Split the string by commas to check individual eras
         requestedEras = options.era.split(",")
         # Check that the entry is a valid era
         for eraName in requestedEras :
-            if not hasattr( eras, eraName ) : # Not valid, so print a helpful message
+            if not hasattr( eras, eraName ) or not checkModifier(getattr(eras,eraName)): # Not valid, so print a helpful message
                 validOptions="" # Create a stringified list of valid options to print to the user
                 for key in eras.__dict__ :
-                    if eras.internalUseEras.count(getattr(eras,key)) > 0 : continue # Don't tell the user about things they should leave alone
-                    if isinstance( eras.__dict__[key], Modifier ) or isinstance( eras.__dict__[key], ModifierChain ) :
+                    if checkModifier(eras.__dict__[key]):
                         if validOptions!="" : validOptions+=", " 
                         validOptions+="'"+key+"'"
                 raise Exception( "'%s' is not a valid option for '--era'. Valid options are %s." % (eraName, validOptions) )
-        # Warn the user if they are explicitly setting an era that should be
-        # set automatically by the ConfigBuilder.
-        for eraName in requestedEras : # Same loop, but had to make sure all the names existed first
-            if eras.internalUseEras.count(getattr(eras,eraName)) > 0 :
-                print "WARNING: You have explicitly set '"+eraName+"' with the '--era' command. That is usually reserved for internal use only."
+    # If the "--fast" option was supplied automatically enable the fastSim era
+    if options.fast :
+        if options.era:
+            options.era+=",fastSim"
+        else :
+            options.era="fastSim"
+
+    # options incompatible with fastsim
+    if options.fast and not options.scenario == "pp":
+        raise Exception("ERROR: the --option fast is only compatible with the default scenario (--scenario=pp)")
+    if options.fast and 'HLT' in options.trimmedStep:
+        raise Exception("ERROR: the --option fast is incompatible with HLT (HLT is no longer available in FastSim)")
 
     return options
 

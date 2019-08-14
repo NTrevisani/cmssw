@@ -12,10 +12,13 @@
 #include "CondFormats/SiPixelObjects/interface/SiPixel2DTemplateDBObject.h"
 #include "CondFormats/SiPixelObjects/interface/SiPixelGenErrorDBObject.h"
 #include "CondFormats/SiPixelObjects/interface/SiPixelLorentzAngle.h"
+#include "CondFormats/SiPixelObjects/interface/SiPixelDynamicInefficiency.h"
 #include "CondFormats/SiPixelObjects/interface/SiPixelPerformanceSummary.h"
 #include "CondFormats/SiPixelObjects/interface/SiPixelCalibConfiguration.h"
 #include "CondFormats/SiPixelObjects/interface/SiPixelQuality.h"
+#include "CondFormats/SiPixelObjects/interface/SiPixelFEDChannelContainer.h"
 #include "CondFormats/SiPixelObjects/interface/PixelDCSObject.h"
+#include "CondFormats/SiPixelObjects/interface/SiPixelQualityProbabilities.h"
 
 #include "CondFormats/External/interface/DetID.h"
-
+#include "CondFormats/External/interface/PixelFEDChannel.h"

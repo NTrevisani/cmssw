@@ -17,28 +17,25 @@
 // Original Author:
 //         Created:  Wed Feb 10 11:15:16 CST 2010
 //
-#if !defined(__CINT__) && !defined(__MAKECINT__)
 
 #include "DataFormats/Provenance/interface/ProcessHistoryRegistry.h"
 
 namespace fwlite {
-    class HistoryGetterBase {
-        public:
-            HistoryGetterBase();
-            virtual ~HistoryGetterBase();
+  class HistoryGetterBase {
+  public:
+    HistoryGetterBase();
+    virtual ~HistoryGetterBase();
 
-            // ---------- const member functions ---------------------
-            virtual const edm::ProcessHistory& history() const = 0;
+    // ---------- const member functions ---------------------
+    virtual const edm::ProcessHistory& history() const = 0;
 
-        private:
-            HistoryGetterBase(const HistoryGetterBase&); // stop default
+  private:
+    HistoryGetterBase(const HistoryGetterBase&) = delete;  // stop default
 
-            const HistoryGetterBase& operator=(const HistoryGetterBase&); // stop default
+    const HistoryGetterBase& operator=(const HistoryGetterBase&) = delete;  // stop default
 
-            // ---------- member data --------------------------------
-    };
-}
-
-#endif /*__CINT__ */
+    // ---------- member data --------------------------------
+  };
+}  // namespace fwlite
 
 #endif

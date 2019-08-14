@@ -9,36 +9,35 @@
 
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
-#include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
+#include "HLTrigger/HLTcore/interface/HLTPrescaleProvider.h"
 
 #include "FWCore/Utilities/interface/InputTag.h"
 
 #include "DataFormats/EgammaCandidates/interface/GsfElectronFwd.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "DQMServices/Core/interface/DQMEDAnalyzer.h"
-
+#include "DQMServices/Core/interface/DQMStore.h"
 
 namespace reco {
-class Jet;
-class MET;
-class BeamSpot;
-}
+  class Jet;
+  class MET;
+  class BeamSpot;
+}  // namespace reco
 
-class DQMStore;
-class MonitorElement;
 class EwkElecDQM : public DQMEDAnalyzer {
- public:
+public:
   EwkElecDQM(const edm::ParameterSet&);
+
+protected:
   //Book histograms
-  void bookHistograms(DQMStore::IBooker &,
-    edm::Run const &, edm::EventSetup const &) override;
-  void dqmBeginRun(const edm::Run&, const edm::EventSetup&);
-  virtual void analyze(const edm::Event&, const edm::EventSetup&);
-  virtual void endRun(const edm::Run&, const edm::EventSetup&);
+  void bookHistograms(DQMStore::IBooker&, edm::Run const&, edm::EventSetup const&) override;
+  void dqmBeginRun(const edm::Run&, const edm::EventSetup&) override;
+  void analyze(const edm::Event&, const edm::EventSetup&) override;
+  void endRun(const edm::Run&, const edm::EventSetup&) override;
 
   double calcDeltaPhi(double phi1, double phi2);
 
- private:
+private:
   //  edm::InputTag muonTag_;
   edm::InputTag metTag_;
   edm::InputTag jetTag_;
@@ -91,7 +90,7 @@ class EwkElecDQM : public DQMEDAnalyzer {
   unsigned int PUMax_, PUBinCount_;
 
   bool isValidHltConfig_;
-  HLTConfigProvider hltConfigProvider_;
+  HLTPrescaleProvider hltPrescaleProvider_;
 
   unsigned int nall;
   unsigned int nrec;

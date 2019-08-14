@@ -1,8 +1,10 @@
+from __future__ import print_function
 ##  Note: Please do not use or modify any data or functions with a
 ##  leading underscore.  If you "mess" with the internal structure,
 ##  the classes may not function as intended.
 
 
+from builtins import range
 from FWCore.Utilities.Enumerate import Enumerate
 from DataFormats.FWLite import Events, Handle
 import re
@@ -13,6 +15,8 @@ import random
 import sys
 import inspect
 import ROOT
+import six
+from functools import reduce
 ROOT.gROOT.SetBatch()
 
 # regex for reducing 'warn()' filenames
@@ -36,17 +40,17 @@ def warn (*args, **kwargs):
     #print "after '%s'" % filename
     blankLines = kwargs.get('blankLines', 0)
     if blankLines:
-        print '\n' * blankLines
+        print('\n' * blankLines)
     spaces = kwargs.get('spaces', 0)
     if spaces:
-        print ' ' * spaces,
+        print(' ' * spaces, end=' ')
     if len (args):
-        print "%s (%s): " % (filename, lineNum),
+        print("%s (%s): " % (filename, lineNum), end=' ')
         for arg in args:
-            print arg,
-        print
+            print(arg, end=' ')
+        print()
     else:
-        print "%s (%s):" % (filename, lineNum)
+        print("%s (%s):" % (filename, lineNum))
 
 
 class GenObject (object):
@@ -66,7 +70,7 @@ class GenObject (object):
                                types.string] )
     _defaultValue      = dict ( {types.float  : 0.,
                                  types.int    : 0,
-                                 types.long   : 0L,
+                                 types.long   : 0,
                                  types.string : '""' } )
     _objsDict          = {} # info about GenObjects
     _equivDict         = {} # hold info about 'equivalent' muons
@@ -135,18 +139,18 @@ class GenObject (object):
     @staticmethod
     def addObjectVariable (obj, var, **optionsDict):
         """ User passes in in object and variable names."""
-        if not optionsDict.has_key ('varType'):
+        if 'varType' not in optionsDict:
             optionsDict['varType'] = GenObject.types.float
         varType = optionsDict['varType']
         if not GenObject.types.isValidValue (varType):
-            print "Type '%s' not valid.  Skipping (%s, %s, %s)." % \
-                  (varType, obj, var, varType)
+            print("Type '%s' not valid.  Skipping (%s, %s, %s)." % \
+                  (varType, obj, var, varType))
             return
-        if not optionsDict.has_key ('default'):
+        if 'default' not in optionsDict:
             optionsDict['default'] = GenObject._defaultValue[varType]
         if obj.startswith ("_") or var.startswith ("_"):
-            print "Skipping (%s, %s, %s) because of leading underscore." % \
-                  (obj, var, varType)
+            print("Skipping (%s, %s, %s) because of leading underscore." % \
+                  (obj, var, varType))
             return
         GenObject._objsDict.setdefault (obj, {}).setdefault (var, optionsDict)
 
@@ -164,8 +168,8 @@ class GenObject (object):
         """Adds an equivalence constraint.  Must have at least one to
         compare GO objects."""
         if obj.startswith ("_"):
-            print "Skipping (%s, %s) because of leading underscore." % \
-                  (obj, expression)
+            print("Skipping (%s, %s) because of leading underscore." % \
+                  (obj, expression))
             return
         GenObject._equivDict.setdefault (obj,[]).append ( (variable,
                                                            precision) )
@@ -174,17 +178,17 @@ class GenObject (object):
     @staticmethod
     def printGlobal():
         """Meant for debugging, but ok if called by user"""
-        print "objs: "
+        print("objs: ")
         pprint.pprint (GenObject._objsDict,        indent=4)
-        print "equiv: "                            
+        print("equiv: ")                            
         pprint.pprint (GenObject._equivDict,       indent=4)
-        print "ntuple: "                           
+        print("ntuple: ")                           
         pprint.pprint (GenObject._ntupleDict,      indent=4)
-        print "tofill: "                           
+        print("tofill: ")                           
         pprint.pprint (GenObject._tofillDict,      indent=4)
-        print "kitchenSink: "
+        print("kitchenSink: ")
         pprint.pprint (GenObject._kitchenSinkDict, indent=4)
-        print "rootClassDict"
+        print("rootClassDict")
         pprint.pprint (GenObject._rootClassDict,   indent=4)
 
 
@@ -241,10 +245,10 @@ class GenObject (object):
     def _createCppClass (objName):
         """Returns a string containing the '.C' file necessary to
         generate a shared object library with dictionary."""
-        if not GenObject._objsDict.has_key (objName):
+        if objName not in GenObject._objsDict:
             # not good
-            print "Error: GenObject does not know about object '%s'." % objName
-            raise RuntimeError, "Failed to create C++ class."
+            print("Error: GenObject does not know about object '%s'." % objName)
+            raise RuntimeError("Failed to create C++ class.")
         className   = GenObject.rootClassName (objName)
         diffName    = GenObject.rootDiffClassName (objName)
         contName    = GenObject.rootDiffContClassName (objName)
@@ -282,7 +286,7 @@ class GenObject (object):
                     diffClass   += "         %s (%s)" % (deltaKey, default)
                     diffDataDec += "      %s %s;\n" % (cppType, deltaKey)
             else:
-                raise RuntimeError, "Shouldn't be here yet."
+                raise RuntimeError("Shouldn't be here yet.")
             # definition
         # do contClass
         if GenObject.isSingleton (objName):
@@ -312,7 +316,7 @@ class GenObject (object):
     def _loadGoRootLibrary ():
         """Loads Root shared object library associated with all
         defined GenObjects. Will create library if necessary."""
-        print "Loading GO Root Library"
+        print("Loading GO Root Library")
         key = "_loadedLibrary"        
         if GenObject._kitchenSinkDict.get (key):
             # Already done, don't do it again:
@@ -333,20 +337,20 @@ class GenObject (object):
         linuxSO = "%s.so" % SO
         windowsSO = "%s.dll" % SO
         if not os.path.exists (linuxSO) and not os.path.exists (windowsSO):
-            print "creating SO"
+            print("creating SO")
             filename = "%s/%s.C" % (GenObjectRootLibDir, basename)
             if not os.path.exists (filename):
-                print "creating .C file"
+                print("creating .C file")
                 target = open (filename, "w")
                 target.write (sourceCode)
                 target.close()
             else:
-                print "%s exists" % filename
+                print("%s exists" % filename)
             ## command = "echo .L %s+ | root.exe -b" % filename
             ## os.system (command)
             ROOT.gSystem.CompileMacro (filename, "k")
         else:
-            print "loading %s" % SO
+            print("loading %s" % SO)
             ROOT.gSystem.Load(SO)
         return
 
@@ -408,7 +412,7 @@ class GenObject (object):
         if not offset:
             return handle
         if offset < 0:
-            print "Huh?  Too few '<' for each '>' in handle '%'" % handle
+            print("Huh?  Too few '<' for each '>' in handle '%'" % handle)
             return handle
         return handle + ' >' * offset
 
@@ -424,7 +428,7 @@ class GenObject (object):
         try:
             config = open (configFile, 'r')
         except:
-            raise RuntimeError, "Can't open configuration '%s'" % configFile
+            raise RuntimeError("Can't open configuration '%s'" % configFile)
         for lineNum, fullLine in enumerate (config):
             fullLine = fullLine.strip()
             # get rid of comments
@@ -442,16 +446,16 @@ class GenObject (object):
                 section = bracketMatch.group(1)
                 words = GenObject._spacesRE.split( section )
                 if len (words) < 1:
-                    raise RuntimeError, "Don't understand line '%s'(%d)" \
-                          % (fullLine, lineNum)
+                    raise RuntimeError("Don't understand line '%s'(%d)" \
+                          % (fullLine, lineNum))
                 # The first word is the object name
                 # reset the rest of the list
                 objName = words[0]
                 words = words[1:]
                 colonWords = GenObject._colonRE.split (objName)
                 if len (colonWords) > 3:
-                    raise RuntimeError, "Don't understand line '%s'(%d)" \
-                          % (fullLine, lineNum)
+                    raise RuntimeError("Don't understand line '%s'(%d)" \
+                          % (fullLine, lineNum))
                 if len (colonWords) == 1:
                     ##########################
                     ## GenObject Definition ##
@@ -466,11 +470,10 @@ class GenObject (object):
                             continue
                         # If we're still here, then we didn't have a valid
                         # option.  Complain vociferously
-                        print "I don't understand '%s' in section '%s' : %s" \
-                              % (word, section, mode)
-                        raise RuntimeError, \
-                              "Config file parser error '%s'(%d)" \
-                              % (fullLine, lineNum)
+                        print("I don't understand '%s' in section '%s' : %s" \
+                              % (word, section, mode))
+                        raise RuntimeError("Config file parser error '%s'(%d)" \
+                              % (fullLine, lineNum))
                 elif len (colonWords) == 2:
                     #######################
                     ## Ntuple Definition ##
@@ -535,11 +538,10 @@ class GenObject (object):
                             continue
                         # If we're still here, then we didn't have a valid
                         # option.  Complain vociferously
-                        print "I don't understand '%s' in section '%s' : %s" \
-                              % (word, section, mode)
-                        raise RuntimeError, \
-                              "Config file parser error '%s'(%d)" \
-                              % (fullLine, lineNum)
+                        print("I don't understand '%s' in section '%s' : %s" \
+                              % (word, section, mode))
+                        raise RuntimeError("Config file parser error '%s'(%d)" \
+                              % (fullLine, lineNum))
             ##############
             ## Variable ##
             ##############
@@ -547,17 +549,15 @@ class GenObject (object):
                 # a variable
                 if modeEnum.none == mode:
                     # Poorly formatted 'section' tag
-                    print "I don't understand line '%s'." % fullLine
-                    raise RuntimeError, \
-                          "Config file parser error '%s'(%d)" \
-                          % (fullLine, lineNum)
+                    print("I don't understand line '%s'." % fullLine)
+                    raise RuntimeError("Config file parser error '%s'(%d)" \
+                          % (fullLine, lineNum))
                 colonWords = GenObject._colonRE.split (line, 1)
                 if len (colonWords) < 2:
                     # Poorly formatted 'section' tag
-                    print "I don't understand line '%s'." % fullLine
-                    raise RuntimeError, \
-                          "Config file parser error '%s'(%d)" \
-                          % (fullLine, lineNum)
+                    print("I don't understand line '%s'." % fullLine)
+                    raise RuntimeError("Config file parser error '%s'(%d)" \
+                          % (fullLine, lineNum))
                 varName = colonWords[0]
                 option  = colonWords[1]
                 if option:
@@ -575,20 +575,18 @@ class GenObject (object):
                             for part in pieces:
                                 halves = part.split (",")
                                 if 2 != len (halves):
-                                    print "Problem with -equiv '%s' in '%s'" % \
-                                          (part, section)
-                                    raise RuntimeError, \
-                                          "Config file parser error '%s'(%d)" \
-                                          % (fullLine, lineNum)
+                                    print("Problem with -equiv '%s' in '%s'" % \
+                                          (part, section))
+                                    raise RuntimeError("Config file parser error '%s'(%d)" \
+                                          % (fullLine, lineNum))
                                 if halves[1]:
                                     halves[1] = float (halves[1])
                                     if not halves[1] >= 0:
-                                        print "Problem with -equiv ",\
+                                        print("Problem with -equiv ",\
                                               "'%s' in '%s'" % \
-                                              (part, section)
-                                        raise RuntimeError, \
-                                              "Config file parser error '%s'(%d)" \
-                                              % (fullLine, lineNum)
+                                              (part, section))
+                                        raise RuntimeError("Config file parser error '%s'(%d)" \
+                                              % (fullLine, lineNum))
                                 GenObject.setEquivExpression (section,
                                                               halves[0],
                                                               halves[1])
@@ -618,11 +616,10 @@ class GenObject (object):
                             continue
                         # If we're still here, then we didn't have a valid
                         # option.  Complain vociferously
-                        print "I don't understand '%s' in section '%s'." \
-                              % (word, option)
-                        raise RuntimeError, \
-                              "Config file parser error '%s'(%d)" \
-                              % (fullLine, lineNum)
+                        print("I don't understand '%s' in section '%s'." \
+                              % (word, option))
+                        raise RuntimeError("Config file parser error '%s'(%d)" \
+                              % (fullLine, lineNum))
                     GenObject.addObjectVariable (objName, varName, \
                                                  **optionsDict)
                 else: # if modeEnum.define != mode
@@ -638,11 +635,10 @@ class GenObject (object):
                     for word in pieces:
                         # If we're still here, then we didn't have a valid
                         # option.  Complain vociferously
-                        print "I don't understand '%s' in section '%s'." \
-                              % (word, option)
-                        raise RuntimeError, \
-                              "Config file parser error '%s'(%d)" \
-                              % (fullLine, lineNum)
+                        print("I don't understand '%s' in section '%s'." \
+                              % (word, option))
+                        raise RuntimeError("Config file parser error '%s'(%d)" \
+                              % (fullLine, lineNum))
                     tofillDict = GenObject._tofillDict.\
                                  setdefault (tupleName, {}).\
                                  setdefault (objName, {})
@@ -705,7 +701,7 @@ class GenObject (object):
         genObj = GenObject (objName)
         origObj = obj
         if debug: warn (objName, spaces = 9)
-        for genVar, ntDict in tofillObjDict.iteritems():
+        for genVar, ntDict in six.iteritems(tofillObjDict):
             if debug: warn (genVar, spaces = 12)
             # lets work our way down the list
             partsList = ntDict[0]
@@ -851,7 +847,7 @@ class GenObject (object):
     @staticmethod
     def _fillRootObjects (event):
         """Fills root objects from GenObject 'event'"""
-        for objName, obj in sorted (event.iteritems()):
+        for objName, obj in sorted (six.iteritems(event)):
             if GenObject.isSingleton (objName):
                 # Just one
                 GenObject._rootObjectCopy (obj,
@@ -898,7 +894,7 @@ class GenObject (object):
         tofillDict = GenObject._tofillDict.get (tupleName)
         ntupleDict = GenObject._ntupleDict.get (tupleName)
         if not tofillDict:
-            print "Don't know how to fill from '%s' ntuple." % tupleName
+            print("Don't know how to fill from '%s' ntuple." % tupleName)
             return
         eventBranchName = ntupleDict['runevent']
         for objName in tofillDict:
@@ -923,11 +919,11 @@ class GenObject (object):
                     handle = ntupleDict.get('_handle', {}).get(branchName)
                     label  = ntupleDict.get('_label' , {}).get(branchName)
                     if not handle or not label:
-                        raise RuntimeError, "Missing handle or label for '%s'"\
-                              % branchName
+                        raise RuntimeError("Missing handle or label for '%s'"\
+                              % branchName)
                     if not eventTree.getByLabel (label, handle):
-                        raise RuntimeError, "not able to get %s for %s" \
-                              % (label, branchName)
+                        raise RuntimeError("not able to get %s for %s" \
+                              % (label, branchName))
                     objects = handle.product()
             # is this a singleton?
             if GenObject.isSingleton (objName):
@@ -957,28 +953,28 @@ class GenObject (object):
     def printEvent (event):
         """Prints out event dictionary.  Mostly for debugging"""
         # Print out all singletons first
-        for objName, obj in sorted (event.iteritems()):
+        for objName, obj in sorted (six.iteritems(event)):
             #obj = event[objName]
             # is this a singleton?
             if GenObject.isSingleton (objName):
-                print "%s: %s" % (objName, obj)
+                print("%s: %s" % (objName, obj))
         # Now print out all vectors
-        for objName, obj in sorted (event.iteritems()):
+        for objName, obj in sorted (six.iteritems(event)):
             #obj = event[objName]
             # is this a singleton?
             if not GenObject.isSingleton (objName):
                 # o.k. obj is a vector
-                print "%s:" % objName
+                print("%s:" % objName)
                 for single in obj:
-                    print "  ", single
-        print
+                    print("  ", single)
+        print()
 
 
     @staticmethod
     def setAliases (eventTree, tupleName):
         """runs SetAlias on all saved aliases"""
         aliases = GenObject._ntupleDict[tupleName].get('_alias', {})
-        for name, alias in aliases.iteritems():
+        for name, alias in six.iteritems(aliases):
             eventTree.SetAlias (name, alias)
 
 
@@ -986,9 +982,9 @@ class GenObject (object):
     def changeAlias (tupleName, name, alias):
         """Updates an alias for an object for a given tuple"""
         aliasDict = GenObject._ntupleDict[tupleName]['_alias']
-        if not aliasDict.has_key (name):
-            raise RuntimeError, "unknown name '%s' in tuple '%s'" % \
-                  (name, tupleName)
+        if name not in aliasDict:
+            raise RuntimeError("unknown name '%s' in tuple '%s'" % \
+                  (name, tupleName))
         aliasDict[name] = alias
 
 
@@ -996,9 +992,9 @@ class GenObject (object):
     def changeLabel (tupleName, objectName, label):
         """Updates an label for an object for a given tuple"""
         labelDict = GenObject._ntupleDict[tupleName]['_label']
-        if not labelDict.has_key (objectName):
-            raise RuntimeError, "unknown name '%s' in tuple '%s'" % \
-                  (objectName, tupleName)
+        if objectName not in labelDict:
+            raise RuntimeError("unknown name '%s' in tuple '%s'" % \
+                  (objectName, tupleName))
         label = tuple( GenObject._commaRE.split( label ) )
         labelDict[objectName] = label
 
@@ -1035,7 +1031,7 @@ class GenObject (object):
     def getRunEventEntryDict (chain, tupleName, numEntries):
         """Returns a dictionary of run, event tuples to entryIndicies"""
         reeDict = {}
-        for entryIndex in xrange (numEntries):
+        for entryIndex in range (numEntries):
             event = GenObject.loadEventFromTree (chain,
                                                  entryIndex,
                                                  onlyRunEvent = True)
@@ -1094,14 +1090,14 @@ class GenObject (object):
         secondOnly = set()
         # loop over the keys of the first dict and compare to second dict
         for key in firstDict.keys():
-            if secondDict.has_key (key):
+            if key in secondDict:
                 overlap.add (key)
             else:
                 firstOnly.add (key)
         # now loop over keys of second dict and only check for missing
         # entries in first dict
         for key in secondDict.keys():
-            if not firstDict.has_key (key):
+            if key not in firstDict:
                 secondOnly.add (key)
         # All done
         return overlap, firstOnly, secondOnly
@@ -1115,11 +1111,11 @@ class GenObject (object):
         if not len1 or not len2:
             # Nothing to see here folks.  Keep moving.
             if len1:
-                noMatch1Set = set( xrange(len1) )
+                noMatch1Set = set( range(len1) )
             else:
                 noMatch1Set = set ()
             if len2:
-                noMatch2Set = set( xrange(len2) )
+                noMatch2Set = set( range(len2) )
             else:
                 noMatch2Set = set ()
             if debug: warn ("Nothing found", sapces=6)
@@ -1132,8 +1128,8 @@ class GenObject (object):
         if GenObject._kitchenSinkDict.get ('strictPairing') or \
                equivList == [('index', 0)]:
             # we're only matching on index, nothing else matters
-            matchedSet = set (zip ( range( min (len1, len2) ),
-                                    range( min (len1, len2) ) ) )
+            matchedSet = set (zip ( list(range( min (len1, len2))),
+                                    list(range( min (len1, len2))) ) )
             if len1 > len2:
                 # since main pairing goes from 0..len2-1, we now want
                 # to go from len2..len1 inclusive
@@ -1160,10 +1156,10 @@ class GenObject (object):
         
         # First, look for vec2 objects that are equivalent to a
         # given vec1 object.
-        for index1 in xrange (len1):
+        for index1 in range (len1):
             objList = []
             obj1 = vec1[index1]
-            for index2 in xrange (len2):
+            for index2 in range (len2):
                 total = 0.
                 obj2 = vec2[index2]
                 ok = True
@@ -1187,10 +1183,10 @@ class GenObject (object):
             firstDict[index1] = objList
         # Now do the same thing, but this time look for vec1 objects
         # that are equivalent to a given vec2 object
-        for index2 in xrange (len2):
+        for index2 in range (len2):
             objList = []
             obj2 = vec2[index2]
-            for index1 in xrange (len1):
+            for index1 in range (len1):
                 total = 0.
                 obj1 = vec1[index1]
                 ok = True
@@ -1304,8 +1300,8 @@ class GenObject (object):
                     randNumber = random.random()
                     #print "rN", randNumber
                     if randNumber < GenObject._kitchenSinkDict['blurRate']:
-                        print "  %s: changing '%s' of '%s:%d'" \
-                              % (where, varName, obj._objName, count)
+                        print("  %s: changing '%s' of '%s:%d'" \
+                              % (where, varName, obj._objName, count))
                         ## print "objdict", obj.__dict__.get(varName), ':',\
                         ##       value
                         obj.__dict__[varName] += value
@@ -1318,7 +1314,7 @@ class GenObject (object):
         'identical' within requested precision.  If 'diffOutputName'
         is passed in, a root file with a diffTree and missingTree will
         be produced."""
-        print "Comparing Two Trees"
+        print("Comparing Two Trees")
         diffOutputName = kwargs.get ('diffOutputName')
         tupleName1  = GenObject._kitchenSinkDict[chain1]['tupleName']
         numEntries1 = GenObject._kitchenSinkDict[chain1]['numEntries']
@@ -1364,9 +1360,9 @@ class GenObject (object):
             if debug: warn ('event2', blankLines = 3)
             event2 = GenObject.loadEventFromTree (chain2, ree2 [reTuple])
             if GenObject._kitchenSinkDict.get('printEvent'):
-                print "event1:"
+                print("event1:")
                 GenObject.printEvent (event1)
-                print "event2:"
+                print("event2:")
                 GenObject.printEvent (event2)
             if GenObject._kitchenSinkDict.get('blur'):
                 where = reTuple
@@ -1383,7 +1379,7 @@ class GenObject (object):
                     continue
                 if GenObject.isSingleton (objName):
                     # I'll add this in later.  For now, just skip it
-                    print "singleton"
+                    print("singleton")
                     continue
                 # Get ready to calculate root diff object if necessary
                 rootObj = 0
@@ -1403,7 +1399,7 @@ class GenObject (object):
                     countDict = resultsDict.\
                                 setdefault (objName, {}).\
                                 setdefault ('_missing', {})
-                    if countDict.has_key (key):
+                    if key in countDict:
                         countDict[key] += 1
                     else:
                         countDict[key] = 1
@@ -1438,12 +1434,12 @@ class GenObject (object):
                             countDict = resultsDict.\
                                         setdefault (objName, {}).\
                                         setdefault ('_var', {})
-                            if countDict.has_key (varName):
+                            if varName in countDict:
                                 countDict[varName] += 1
                             else:
                                 countDict[varName] = 1
                 key = 'count_%s' % objName
-                if not resultsDict.has_key (key):
+                if key not in resultsDict:
                     resultsDict[key] = 0
                 resultsDict[key] += len (matchedSet)
                 # try cleaning up
@@ -1465,17 +1461,17 @@ class GenObject (object):
     @staticmethod
     def saveTupleAs (chain, rootFile):
         """Saves a chain as a GO tree"""
-        print "saveTupleAs"
+        print("saveTupleAs")
         rootfile, tree = GenObject.setupOutputTree (rootFile, "goTree")
         numEntries = GenObject._kitchenSinkDict[chain]['numEntries']        
-        for entryIndex in xrange (numEntries):
+        for entryIndex in range (numEntries):
             event = GenObject.loadEventFromTree (chain, entryIndex)            
             if GenObject._kitchenSinkDict.get('blur'):
                 where = "run %d event %d" % (event['runevent'].run,
                                              event['runevent'].event)
                 if random.random() < GenObject._kitchenSinkDict.get('blur'):
                     # dropping event
-                    print "Dropping", where
+                    print("Dropping", where)
                     continue
                 GenObject.blurEvent (event,
                                      GenObject._kitchenSinkDict['blur'],
@@ -1501,7 +1497,7 @@ class GenObject (object):
         numEntries = GenObject._kitchenSinkDict[chain]['numEntries']
         debug = GenObject._kitchenSinkDict.get ('debug', False)
         if debug: warn (numEntries)
-        for entryIndex in xrange (numEntries):
+        for entryIndex in range (numEntries):
             if debug: warn (entryIndex, spaces=3)
             event = GenObject.loadEventFromTree (chain, entryIndex)            
             GenObject.printEvent (event)
@@ -1538,7 +1534,7 @@ class GenObject (object):
             except:
                 pass
             # if we're still here, we've got a problem
-            raise RuntimeError, "Unknown parameter '%s'." % word
+            raise RuntimeError("Unknown parameter '%s'." % word)
         return retval
 
         
@@ -1549,14 +1545,14 @@ class GenObject (object):
 
     def __init__ (self, objName):
         """Class initializer"""
-        if not GenObject._objsDict.has_key (objName):# or \
+        if objName not in GenObject._objsDict:# or \
             #not GenObject._equivDict.has_key (objName) :
             # not good
-            print "Error: GenObject does not know about object '%s'." % objName
-            raise RuntimeError, "Failed to create GenObject object."
+            print("Error: GenObject does not know about object '%s'." % objName)
+            raise RuntimeError("Failed to create GenObject object.")
         self._localObjsDict = GenObject._objsDict [objName]
         self._objName = objName;
-        for key, varDict in self._localObjsDict.iteritems():
+        for key, varDict in six.iteritems(self._localObjsDict):
             # if the key starts with an '_', then it is not a
             # variable, so don't treat it as one.
             if key.startswith ("_"):
@@ -1586,10 +1582,10 @@ class GenObject (object):
             # user version - Make sure this variable has already been
 
             # defined for this type:
-            if not self._localObjsDict.has_key (name):
+            if name not in self._localObjsDict:
                 # this variable has not been defined
-                print "Warning: '%s' for class '%s' not setup. Skipping." % \
-                      (name, self._objName)
+                print("Warning: '%s' for class '%s' not setup. Skipping." % \
+                      (name, self._objName))
                 return
             varType = self.getVariableProperty (name, 'varType')
             # if this is an int, make sure it stays an int
@@ -1627,7 +1623,7 @@ class GenObject (object):
     def __str__ (self):
         """String representation"""
         retval = ""
-        for varName, value in sorted (self.__dict__.iteritems()):
+        for varName, value in sorted (six.iteritems(self.__dict__)):
             if varName.startswith ('_'): continue
             form = self.getVariableProperty (varName, "form")
             if form:

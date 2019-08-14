@@ -1,4 +1,5 @@
 # helper classes for sorted and fixed dicts
+import six
 class SortedKeysDict(dict):
     """a dict preserving order of keys"""
     # specialised __repr__ missing.
@@ -16,17 +17,18 @@ class SortedKeysDict(dict):
             else:
                 self.list = list(args[0].iterkeys())
             return
-        self.list = list(super(SortedKeysDict,self).iterkeys())
+        self.list = list(six.iterkeys(super(SortedKeysDict,self)))
 
     def __repr__(self):
-        meat = ', '.join([ '%s: %s' % (repr(key), repr(val)) for key,val in self.iteritems() ])
+        meat = ', '.join([ '%s: %s' % (repr(key), repr(val)) for key,val in six.iteritems(self) ])
         return '{' + meat + '}'
-
     def __iter__(self):
         for key in self.list:
             yield key
     def __setitem__(self, key, value):
         dict.__setitem__(self, key, value)
+        if not hasattr(self,'list'):
+          self.list = list()
         if not key in self.list:
             self.list.append(key)
     def __delitem__(self, key):
@@ -46,13 +48,13 @@ class SortedKeysDict(dict):
     def keys(self):
         return self.list
     def values(self):
-        return [ dict.__getitems__(self, key) for key in self.list]
+        return [ dict.__getitem__(self, key) for key in self.list]
 
 
 class SortedAndFixedKeysDict(SortedKeysDict):
     """a sorted dictionary with fixed/frozen keys"""
     def _blocked_attribute(obj):
-        raise AttributeError, "A SortedAndFixedKeysDict cannot be modified."
+        raise AttributeError("A SortedAndFixedKeysDict cannot be modified.")
     _blocked_attribute = property(_blocked_attribute)
     __delitem__ = __setitem__ = clear = _blocked_attribute
     pop = popitem = setdefault = update = _blocked_attribute
@@ -69,7 +71,7 @@ class SortedAndFixedKeysDict(SortedKeysDict):
 #helper based on code from http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/414283
 class FixedKeysDict(dict):
     def _blocked_attribute(obj):
-        raise AttributeError, "A FixedKeysDict cannot be modified."
+        raise AttributeError("A FixedKeysDict cannot be modified.")
     _blocked_attribute = property(_blocked_attribute)
 
     __delitem__ = __setitem__ = clear = _blocked_attribute

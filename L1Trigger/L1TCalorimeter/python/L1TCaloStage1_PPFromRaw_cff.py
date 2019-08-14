@@ -1,12 +1,12 @@
 import FWCore.ParameterSet.Config as cms
 
-from L1Trigger.L1TCalorimeter.caloStage1Params_cfi import *
+#from L1Trigger.L1TCalorimeter.caloStage1Params_cfi import *
 
 # HCAL TP hack
 from L1Trigger.L1TCalorimeter.L1TRerunHCALTP_FromRaw_cff import *
 
-### CCLA include latest RCT calibrations from UCT
-from L1Trigger.L1TCalorimeter.caloStage1RCTLuts_cff import *
+#now taken from GT:
+#from L1Trigger.L1TCalorimeter.caloStage1RCTLuts_cff import *
 
 from Configuration.StandardSequences.RawToDigi_Data_cff import ecalDigis
 
@@ -43,9 +43,10 @@ l1ExtraLayer2.muonSource = cms.InputTag("simGmtDigis")
 
 
 # the sequence
-L1TCaloStage1_PPFromRaw = cms.Sequence(
+L1TCaloStage1_PPFromRawTask = cms.Task(
     L1TRerunHCALTP_FromRAW
-    +ecalDigis
-    +simRctDigis
-    +L1TCaloStage1
+    ,ecalDigis
+    ,simRctDigis
+    ,L1TCaloStage1Task
 )
+L1TCaloStage1_PPFromRaw = cms.Sequence(L1TCaloStage1_PPFromRawTask)

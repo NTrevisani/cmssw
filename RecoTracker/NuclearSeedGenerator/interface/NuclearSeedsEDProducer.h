@@ -18,7 +18,6 @@
 //
 //
 
-
 // system include files
 #include <memory>
 
@@ -26,7 +25,7 @@
 #include "FWCore/Framework/interface/ESHandle.h"
 
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
@@ -38,7 +37,9 @@
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "RecoTracker/NuclearSeedGenerator/interface/TrajectoryToSeedMap.h"
 
-namespace reco {class TransientTrack;}
+namespace reco {
+  class TransientTrack;
+}
 
 class Trajectory;
 
@@ -46,22 +47,21 @@ class Trajectory;
  *
  */
 
-class NuclearSeedsEDProducer : public edm::EDProducer {
+class NuclearSeedsEDProducer : public edm::stream::EDProducer<> {
+public:
+  explicit NuclearSeedsEDProducer(const edm::ParameterSet&);
+  ~NuclearSeedsEDProducer() override;
 
-   public:
-      explicit NuclearSeedsEDProducer(const edm::ParameterSet&);
-      ~NuclearSeedsEDProducer();
+private:
+  void beginRun(edm::Run const& run, const edm::EventSetup&) override;
+  void produce(edm::Event&, const edm::EventSetup&) override;
 
-   private:
-      virtual void beginRun(edm::Run const& run, const edm::EventSetup&) override;
-      virtual void produce(edm::Event&, const edm::EventSetup&) override;
-      virtual void endJob();
+  // ----------member data ---------------------------
+  edm::ParameterSet conf_;
+  std::unique_ptr<NuclearInteractionFinder> theNuclearInteractionFinder;
 
-      // ----------member data ---------------------------
-      edm::ParameterSet conf_;
-      std::auto_ptr<NuclearInteractionFinder>     theNuclearInteractionFinder;
-
-      bool improveSeeds;
-      std::string producer_;
+  bool improveSeeds;
+  edm::EDGetTokenT<TrajectoryCollection> producer_;
+  edm::EDGetTokenT<MeasurementTrackerEvent> mteToken_;
 };
 #endif

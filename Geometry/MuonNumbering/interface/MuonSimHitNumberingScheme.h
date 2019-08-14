@@ -14,19 +14,18 @@
 
 class MuonBaseNumber;
 class MuonSubDetector;
-class DDCompactView; 
+class DDCompactView;
+class MuonDDDConstants;
 
 class MuonSimHitNumberingScheme : public MuonNumberingScheme {
-
- public:
-
+public:
   MuonSimHitNumberingScheme(MuonSubDetector*, const DDCompactView& cpv);
-  ~MuonSimHitNumberingScheme();
-  
-  virtual int baseNumberToUnitNumber(const MuonBaseNumber&);
-  
- private:
+  MuonSimHitNumberingScheme(MuonSubDetector*, const MuonDDDConstants& muonConstants);
+  ~MuonSimHitNumberingScheme() override;
 
+  int baseNumberToUnitNumber(const MuonBaseNumber&) override;
+
+private:
   MuonSubDetector* theDetector;
   MuonNumberingScheme* theNumbering;
 };

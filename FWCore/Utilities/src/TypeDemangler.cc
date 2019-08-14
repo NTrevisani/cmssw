@@ -1,7 +1,7 @@
 #include <cxxabi.h>
 #include <cctype>
 #include <string>
-#include "boost/regex.hpp"
+#include <regex>
 #include "FWCore/Utilities/interface/Exception.h"
 
 /********************************************************************
@@ -25,17 +25,15 @@
 
 ********************************************************************/
 namespace {
-  void
-  reformatter(std::string& input, char const* exp, char const* format) {
-    boost::regex regexp(exp, boost::regex::egrep);
-    while(boost::regex_match(input, regexp)) {
-      std::string newstring = boost::regex_replace(input, regexp, format);
+  void reformatter(std::string& input, char const* exp, char const* format) {
+    std::regex regexp(exp, std::regex::egrep);
+    while (std::regex_match(input, regexp)) {
+      std::string newstring = std::regex_replace(input, regexp, format);
       input.swap(newstring);
     }
   }
 
-  void
-  removeParameter(std::string& demangledName, std::string const& toRemove) {
+  void removeParameter(std::string& demangledName, std::string const& toRemove) {
     std::string::size_type const asize = toRemove.size();
     char const* const delimiters = "<>";
     std::string::size_type index = std::string::npos;
@@ -57,11 +55,10 @@ namespace {
         }
         ++inx;
       }
-    } 
+    }
   }
 
-  void
-  constBeforeIdentifier(std::string& demangledName) {
+  void constBeforeIdentifier(std::string& demangledName) {
     std::string const toBeMoved(" const");
     std::string::size_type const asize = toBeMoved.size();
     std::string::size_type index = std::string::npos;
@@ -73,7 +70,8 @@ namespace {
         if (c == '>') {
           ++depth;
         } else if (depth > 0) {
-          if (c == '<') --depth;
+          if (c == '<')
+            --depth;
         } else if (c == '<' || c == ',') {
           demangledName.insert(inx + 1, "const ");
           break;
@@ -81,40 +79,56 @@ namespace {
       }
     }
   }
-}
+}  // namespace
 
 namespace edm {
-  std::string
-  typeDemangle(char const* mangledName) {
+  void replaceString(std::string& demangledName, std::string const& from, std::string const& to) {
+    // from must not be a substring of to.
+    std::string::size_type length = from.size();
+    std::string::size_type pos = 0;
+    while ((pos = demangledName.find(from, pos)) != std::string::npos) {
+      demangledName.replace(pos, length, to);
+    }
+  }
+
+  std::string typeDemangle(char const* mangledName) {
     int status = 0;
-    size_t* const nullSize = 0;
-    char* const null = 0;
-    
+    size_t* const nullSize = nullptr;
+    char* const null = nullptr;
+
     // The demangled C style string is allocated with malloc, so it must be deleted with free().
     char* demangled = abi::__cxa_demangle(mangledName, null, nullSize, &status);
     if (status != 0) {
       throw cms::Exception("Demangling error") << " '" << mangledName << "'\n";
-    } 
+    }
     std::string demangledName(demangled);
     free(demangled);
-    // We must use the same conventions used by REFLEX.
+    // We must use the same conventions previously used by REFLEX.
     // The order of these is important.
     // No space after comma
-    reformatter(demangledName, "(.*), (.*)", "$1,$2");
+    replaceString(demangledName, ", ", ",");
+    // No space before opening square bracket
+    replaceString(demangledName, " [", "[");
+    // clang libc++ uses __1:: namespace
+    replaceString(demangledName, "std::__1::", "std::");
+    // new gcc abi uses __cxx11:: namespace
+    replaceString(demangledName, "std::__cxx11::", "std::");
     // Strip default allocator
     std::string const allocator(",std::allocator<");
     removeParameter(demangledName, allocator);
     // Strip default comparator
     std::string const comparator(",std::less<");
     removeParameter(demangledName, comparator);
-    // Replace 'std::string' with 'std::basic_string<char>'.
-    reformatter(demangledName, "(.*[^0-9A-Za-z_])std::string([^0-9A-Za-z_].*)", "$1std::basic_string<char>$2");
     // Put const qualifier before identifier.
     constBeforeIdentifier(demangledName);
-    // No two consecutive '>' 
-    reformatter(demangledName, "(.*)>>(.*)", "$1> >$2");
+    // No two consecutive '>'
+    replaceString(demangledName, ">>", "> >");
     // No u or l qualifiers for integers.
     reformatter(demangledName, "(.*[<,][0-9]+)[ul]l*([,>].*)", "$1$2");
+    // For ROOT 6 and beyond, replace 'unsigned long long' with 'ULong64_t'
+    replaceString(demangledName, "unsigned long long", "ULong64_t");
+    // For ROOT 6 and beyond, replace 'long long' with 'Long64_t'
+    replaceString(demangledName, "long long", "Long64_t");
     return demangledName;
   }
-}
+}  // namespace edm

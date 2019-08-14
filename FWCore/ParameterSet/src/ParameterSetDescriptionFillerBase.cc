@@ -2,7 +2,7 @@
 //
 // Package:     ParameterSet
 // Class  :     ParameterSetDescriptionFillerBase
-// 
+//
 // Implementation:
 //     <Notes on implementation>
 //
@@ -15,7 +15,6 @@
 // user include files
 #include "FWCore/ParameterSet/interface/ParameterSetDescriptionFillerBase.h"
 
-
 //
 // constants, enums and typedefs
 //
@@ -26,15 +25,22 @@ const std::string edm::ParameterSetDescriptionFillerBase::kBaseForESProducer("ES
 const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForEDAnalyzer("EDAnalyzer");
 const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForEDProducer("EDProducer");
 const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForEDFilter("EDFilter");
+const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForOutputModule("OutputModule");
 const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForOneEDAnalyzer("one::EDAnalyzer");
 const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForOneEDProducer("one::EDProducer");
 const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForOneEDFilter("one::EDFilter");
+const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForOneOutputModule("one::OutputModule");
 const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForStreamEDAnalyzer("stream::EDAnalyzer");
 const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForStreamEDProducer("stream::EDProducer");
 const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForStreamEDFilter("stream::EDFilter");
 const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForGlobalEDAnalyzer("global::EDAnalyzer");
 const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForGlobalEDProducer("global::EDProducer");
 const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForGlobalEDFilter("global::EDFilter");
+const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForGlobalOutputModule("global::OutputModule");
+const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForLimitedEDAnalyzer("limited::EDAnalyzer");
+const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForLimitedEDProducer("limited::EDProducer");
+const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForLimitedEDFilter("limited::EDFilter");
+const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForLimitedOutputModule("limited::OutputModule");
 
 //
 // static data member definitions
@@ -52,10 +58,8 @@ const std::string edm::ParameterSetDescriptionFillerBase::kExtendedBaseForGlobal
 //    // do actual copying here;
 // }
 namespace edm {
-ParameterSetDescriptionFillerBase::~ParameterSetDescriptionFillerBase()
-{
-}
-}
+  ParameterSetDescriptionFillerBase::~ParameterSetDescriptionFillerBase() {}
+}  // namespace edm
 //
 // assignment operators
 //

@@ -1,51 +1,36 @@
 #ifndef GEOMETRY_TRACKERNUMBERINGBUILDER_TRACKERTOPOLOGYEP_H
 #define GEOMETRY_TRACKERNUMBERINGBUILDER_TRACKERTOPOLOGYEP_H 1
 
-
-// system include files
-#include <memory>
-#include "boost/shared_ptr.hpp"
-
-// user include files
-#include "FWCore/Framework/interface/ModuleFactory.h"
+#include "memory"
 #include "FWCore/Framework/interface/ESProducer.h"
-
-#include "FWCore/Framework/interface/ESHandle.h"
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
-
-#include "Geometry/Records/interface/IdealGeometryRecord.h"
+#include "Geometry/Records/interface/TrackerTopologyRcd.h"
+#include "CondFormats/GeometryObjects/interface/PTrackerParameters.h"
 
 namespace edm {
   class ConfigurationDescriptions;
 }
 
-//
-// class decleration
-//
-
 class TrackerTopologyEP : public edm::ESProducer {
-
 public:
   TrackerTopologyEP(const edm::ParameterSet&);
-  ~TrackerTopologyEP();
 
-  typedef boost::shared_ptr<TrackerTopology> ReturnType;
+  using ReturnType = std::unique_ptr<TrackerTopology>;
 
-  static void fillDescriptions( edm::ConfigurationDescriptions & descriptions );
-    
-  ReturnType produce(const IdealGeometryRecord&);
+  static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
+
+  ReturnType produce(const TrackerTopologyRcd&);
 
 private:
-  // ----------member data ---------------------------
-  TrackerTopology::PixelBarrelValues pxbVals_;
-  TrackerTopology::PixelEndcapValues pxfVals_;
-  TrackerTopology::TECValues tecVals_;
-  TrackerTopology::TIBValues tibVals_;
-  TrackerTopology::TIDValues tidVals_;
-  TrackerTopology::TOBValues tobVals_;
-  
+  void fillParameters(const PTrackerParameters&,
+                      TrackerTopology::PixelBarrelValues& pxbVals,
+                      TrackerTopology::PixelEndcapValues& pxfVals,
+                      TrackerTopology::TECValues& tecVals,
+                      TrackerTopology::TIBValues& tibVals,
+                      TrackerTopology::TIDValues& tidVals,
+                      TrackerTopology::TOBValues& tobVals);
 
-
-
+  const edm::ESGetToken<PTrackerParameters, PTrackerParametersRcd> token_;
 };
+
 #endif

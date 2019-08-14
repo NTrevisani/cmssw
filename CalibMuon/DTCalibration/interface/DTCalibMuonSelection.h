@@ -2,34 +2,32 @@
 // Original Author:  Mario Pelliccioni, Gianluca Cerminara
 //         Created:  Tue Sep  9 15:56:24 CEST 2008
 
-
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/EDFilter.h"
-#include "FWCore/Utilities/interface/InputTag.h"
+#include "FWCore/Utilities/interface/EDGetToken.h"
 
+#include "DataFormats/MuonReco/interface/MuonFwd.h"
 
 #include <vector>
 #include <string>
 
 class DTCalibMuonSelection : public edm::EDFilter {
 public:
-
   explicit DTCalibMuonSelection(const edm::ParameterSet&);
 
-  ~DTCalibMuonSelection();
-  
+  ~DTCalibMuonSelection() override;
+
 private:
-  virtual void beginJob() ;
+  void beginJob() override;
 
-  virtual bool filter(edm::Event&, const edm::EventSetup&);
+  bool filter(edm::Event&, const edm::EventSetup&) override;
 
-  virtual void endJob() ;
-  
-  edm::InputTag muonList;
+  void endJob() override;
+
+  edm::EDGetTokenT<reco::MuonCollection> muonList;
 
   double etaMin;
   double etaMax;
   double ptMin;
-
 };

@@ -92,11 +92,9 @@
 #include <memory>
 #include <unistd.h>
 
-
 #include <iostream>
 #include <fstream>
 #include <vector>
-
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -111,58 +109,57 @@
 
 // DQM
 #include "DQMServices/Core/interface/DQMStore.h"
-#include "DQMServices/Core/interface/MonitorElement.h"
 #include "DataFormats/L1GlobalCaloTrigger/interface/L1GctCollections.h"
 #include "DQMServices/Core/interface/DQMEDAnalyzer.h"
-
-
 
 //
 // class declaration
 //
 
 class L1TGCT : public DQMEDAnalyzer {
-
 public:
-
-// Constructor
+  // Constructor
   L1TGCT(const edm::ParameterSet& ps);
-  
-// Destructor
- virtual ~L1TGCT();
+
+  // Destructor
+  ~L1TGCT() override;
 
 protected:
-// Analyze
- void analyze(const edm::Event& e, const edm::EventSetup& c);
+  // Analyze
+  void analyze(const edm::Event& e, const edm::EventSetup& c) override;
 
-  virtual void dqmBeginRun(const edm::Run&, const edm::EventSetup&);
-  virtual void bookHistograms(DQMStore::IBooker &ibooker, edm::Run const&, edm::EventSetup const&) override ;
-  virtual void beginLuminosityBlock(const edm::LuminosityBlock&, const edm::EventSetup&);
+  void dqmBeginRun(const edm::Run&, const edm::EventSetup&) override;
+  void bookHistograms(DQMStore::IBooker& ibooker, edm::Run const&, edm::EventSetup const&) override;
 
 private:
   // ----------member data ---------------------------
 
+  std::string monitorDir_;
+
   // trigger type information
-  MonitorElement *triggerType_;
+  MonitorElement* triggerType_;
 
   // Jet and EM stuff
-  MonitorElement* l1GctAllJetsEtEtaPhi_; 
-  MonitorElement* l1GctCenJetsEtEtaPhi_; 
+  MonitorElement* l1GctAllJetsEtEtaPhi_;
+  MonitorElement* l1GctCenJetsEtEtaPhi_;
   MonitorElement* l1GctForJetsEtEtaPhi_;
   MonitorElement* l1GctTauJetsEtEtaPhi_;
+  MonitorElement* l1GctIsoTauJetsEtEtaPhi_;
   MonitorElement* l1GctIsoEmRankEtaPhi_;
   MonitorElement* l1GctNonIsoEmRankEtaPhi_;
 
-  MonitorElement* l1GctAllJetsOccEtaPhi_; 
+  MonitorElement* l1GctAllJetsOccEtaPhi_;
   MonitorElement* l1GctCenJetsOccEtaPhi_;
-  MonitorElement* l1GctForJetsOccEtaPhi_;  
-  MonitorElement* l1GctTauJetsOccEtaPhi_;  
-  MonitorElement* l1GctIsoEmOccEtaPhi_;    
-  MonitorElement* l1GctNonIsoEmOccEtaPhi_; 
+  MonitorElement* l1GctForJetsOccEtaPhi_;
+  MonitorElement* l1GctTauJetsOccEtaPhi_;
+  MonitorElement* l1GctIsoTauJetsOccEtaPhi_;
+  MonitorElement* l1GctIsoEmOccEtaPhi_;
+  MonitorElement* l1GctNonIsoEmOccEtaPhi_;
 
   MonitorElement* l1GctCenJetsRank_;
   MonitorElement* l1GctForJetsRank_;
   MonitorElement* l1GctTauJetsRank_;
+  MonitorElement* l1GctIsoTauJetsRank_;
   MonitorElement* l1GctIsoEmRank_;
   MonitorElement* l1GctNonIsoEmRank_;
 
@@ -187,7 +184,7 @@ private:
   MonitorElement* l1GctEtHadOf_;
   MonitorElement* l1GctEtHadOccBx_;
   MonitorElement* l1GctEtTotalEtHadCorr_;
-  
+
   // HF Rings stuff
   MonitorElement* l1GctHFRing1PosEtaNegEta_;
   MonitorElement* l1GctHFRing2PosEtaNegEta_;
@@ -205,11 +202,9 @@ private:
   MonitorElement* l1GctHFRingRatioNegEta_;
   MonitorElement* l1GctHFRingETSumOccBx_;
   MonitorElement* l1GctHFRingTowerCountOccBx_;
-  MonitorElement* runId_;
-  MonitorElement* lumisecId_;
 
-  int nev_; // Number of events processed
-  std::string outputFile_; //file name for ROOT ouput
+  int nev_;                 // Number of events processed
+  std::string outputFile_;  //file name for ROOT ouput
   bool verbose_;
   bool monitorDaemon_;
   std::ofstream logFile_;
@@ -217,11 +212,13 @@ private:
   edm::InputTag gctCenJetsSource_;
   edm::InputTag gctForJetsSource_;
   edm::InputTag gctTauJetsSource_;
+  edm::InputTag gctIsoTauJetsSource_;
   edm::InputTag gctEnergySumsSource_;
   edm::InputTag gctIsoEmSource_;
   edm::InputTag gctNonIsoEmSource_;
 
   /// filter TriggerType
+  bool m_stage1_layer2_;
   int filterTriggerType_;
 
   //define Token(-s)
@@ -230,13 +227,13 @@ private:
   edm::EDGetTokenT<L1GctJetCandCollection> gctCenJetsSourceToken_;
   edm::EDGetTokenT<L1GctJetCandCollection> gctForJetsSourceToken_;
   edm::EDGetTokenT<L1GctJetCandCollection> gctTauJetsSourceToken_;
+  edm::EDGetTokenT<L1GctJetCandCollection> gctIsoTauJetsSourceToken_;
   edm::EDGetTokenT<L1GctHFRingEtSumsCollection> gctEnergySumsSourceToken_;
   edm::EDGetTokenT<L1GctHFBitCountsCollection> l1HFCountsToken_;
   edm::EDGetTokenT<L1GctEtMissCollection> l1EtMissToken_;
   edm::EDGetTokenT<L1GctHtMissCollection> l1HtMissToken_;
   edm::EDGetTokenT<L1GctEtHadCollection> l1EtHadToken_;
   edm::EDGetTokenT<L1GctEtTotalCollection> l1EtTotalToken_;
-
 };
 
 #endif

@@ -4,7 +4,7 @@
 //
 // Package:     MuonAlignment
 // Class  :     MuonAlignmentInputMethod
-// 
+//
 /**\class MuonAlignmentInputMethod MuonAlignmentInputMethod.h Alignment/MuonAlignment/interface/MuonAlignmentInputMethod.h
 
  Description: <one line class summary>
@@ -20,7 +20,7 @@
 //
 
 // system include files
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 #include "FWCore/Framework/interface/EventSetup.h"
 
@@ -32,29 +32,28 @@
 // forward declarations
 
 class MuonAlignmentInputMethod {
-   public:
-      MuonAlignmentInputMethod();
-      virtual ~MuonAlignmentInputMethod();
+public:
+  MuonAlignmentInputMethod();
+  virtual ~MuonAlignmentInputMethod();
 
-      // ---------- const member functions ---------------------
+  // ---------- const member functions ---------------------
 
-      // ---------- static member functions --------------------
+  // ---------- static member functions --------------------
 
-      // ---------- member functions ---------------------------
+  // ---------- member functions ---------------------------
 
-      virtual AlignableMuon *newAlignableMuon(const edm::EventSetup &iSetup) const;
+  virtual AlignableMuon *newAlignableMuon(const edm::EventSetup &iSetup) const;
 
-   protected:
-      boost::shared_ptr<DTGeometry> idealDTGeometry(const edm::EventSetup &iSetup) const;
-      boost::shared_ptr<CSCGeometry> idealCSCGeometry(const edm::EventSetup &iSetup) const;
+protected:
+  std::shared_ptr<DTGeometry> idealDTGeometry(const edm::EventSetup &iSetup) const;
+  std::shared_ptr<CSCGeometry> idealCSCGeometry(const edm::EventSetup &iSetup) const;
 
-   private:
-      MuonAlignmentInputMethod(const MuonAlignmentInputMethod&); // stop default
+private:
+  MuonAlignmentInputMethod(const MuonAlignmentInputMethod &) = delete;  // stop default
 
-      const MuonAlignmentInputMethod& operator=(const MuonAlignmentInputMethod&); // stop default
+  const MuonAlignmentInputMethod &operator=(const MuonAlignmentInputMethod &) = delete;  // stop default
 
-      // ---------- member data --------------------------------
+  // ---------- member data --------------------------------
 };
-
 
 #endif

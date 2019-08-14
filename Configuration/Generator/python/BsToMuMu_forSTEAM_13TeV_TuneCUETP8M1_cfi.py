@@ -11,36 +11,35 @@ generator = cms.EDFilter("Pythia8GeneratorFilter",
                          maxEventsToPrint = cms.untracked.int32(0),
                          pythiaPylistVerbosity = cms.untracked.int32(0),
                          ExternalDecays = cms.PSet(
-        EvtGen130 = cms.untracked.PSet(
-            decay_table = cms.string('GeneratorInterface/EvtGenInterface/data/DECAY_2010.DEC'),
-            particle_property_file = cms.FileInPath('GeneratorInterface/EvtGenInterface/data/evt.pdl'),
-          #  user_decay_file = cms.untracked.bool(True),
-            user_decay_file = cms.vstring('GeneratorInterface/ExternalDecays/data/Bs_mumu.dec'),
-            list_forced_decays = cms.vstring('MyB_s0','Myanti-B_s0'),
-            operates_on_particles = cms.vint32()
-            ),
-        parameterSets = cms.vstring('EvtGen130')
-        ),
-                         #EvtGen = cms.untracked.PSet(
-                         #operates_on_particles = cms.vint32( 0 ), # 0 (zero) means default list (hardcoded)
-                         #use_default_decay = cms.untracked.bool(False),
-                         #decay_table = cms.FileInPath('GeneratorInterface/ExternalDecays/data/DECAY_NOLONGLIFE.DEC'),
-                         #particle_property_file = cms.FileInPath('GeneratorInterface/ExternalDecays/data/evt.pdl'),
-                         #user_decay_file = cms.FileInPath('GeneratorInterface/ExternalDecays/data/Bs_mumu.dec'),
-                         #list_forced_decays = cms.vstring('MyB_s0','Myanti-B_s0'),
-                         #),
-                         #parameterSets = cms.vstring('EvtGen')
-                         #),
-                         PythiaParameters = cms.PSet(
-        pythia8CommonSettingsBlock,
-        pythia8CUEP8M1SettingsBlock,
-        processParameters = cms.vstring('HardQCD:all = on'),
-        parameterSets = cms.vstring('pythia8CommonSettings',
+                         #using alternative name for decayer
+                         EvtGen1 = cms.untracked.PSet(
+	                    #uses latest evt and decay tables from evtgen 1.6
+                            decay_table = cms.string('GeneratorInterface/EvtGenInterface/data/DECAY_2014_NOLONGLIFE.DEC'),
+                            particle_property_file = cms.FileInPath('GeneratorInterface/EvtGenInterface/data/evt_2014.pdl'),
+                            convertPythiaCodes = cms.untracked.bool(False),
+                            #here we will use the user.dec store in the release
+                            user_decay_file = cms.vstring('GeneratorInterface/ExternalDecays/data/Bs_mumu.dec'),
+                            list_forced_decays = cms.vstring('MyB_s0','Myanti-B_s0'),
+                            operates_on_particles = cms.vint32()
+                         ),
+                         parameterSets = cms.vstring('EvtGen1')
+                        ),
+                        PythiaParameters = cms.PSet(
+                           pythia8CommonSettingsBlock,
+                           pythia8CUEP8M1SettingsBlock,
+                           processParameters = cms.vstring(            
+                              #filter of a b-quark before hadronizing, and use a better data-like process
+                              'PTFilter:filter = on',
+                              'PTFilter:quarkToFilter = 5',
+                              'PTFilter:scaleToFilter = 1.0',
+                              'SoftQCD:nonDiffractive = on',
+                           ),
+                           parameterSets = cms.vstring('pythia8CommonSettings',
                                     'pythia8CUEP8M1Settings',
                                     'processParameters',
-                                    )
-        )
-                         )
+                           )
+                        )
+)
 
 generator.PythiaParameters.processParameters.extend(EvtGenExtraParticles)
 
@@ -50,10 +49,7 @@ MuMuFilter = cms.EDFilter("MCParticlePairFilter",
                           MaxEta = cms.untracked.vdouble(2.5, 2.5),
                           MinEta = cms.untracked.vdouble(-2.5, -2.5),
                           ParticleCharge = cms.untracked.int32(-1),
-                          #MaxInvMass = cms.untracked.double(5.5),
-                          #MinInvMass = cms.untracked.double(5.0),
-                          ParticleID1 = cms.untracked.vint32(13),
-                          ParticleID2 = cms.untracked.vint32(13)
+                          ParticleID1 = cms.untracked.vint32(13,-13),
                           )
 
 # -- Require Muon from Bs

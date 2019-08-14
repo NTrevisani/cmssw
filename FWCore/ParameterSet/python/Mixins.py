@@ -1,8 +1,12 @@
+from __future__ import print_function
+from builtins import range, object
 import inspect
+import six
 
 class _ConfigureComponent(object):
     """Denotes a class that can be used by the Processes class"""
-    pass
+    def _isTaskComponent(self):
+        return False
 
 class PrintOptions(object):
     def __init__(self):
@@ -15,6 +19,37 @@ class PrintOptions(object):
         self.indent_ += self.deltaIndent_
     def unindent(self):
         self.indent_ -= self.deltaIndent_
+
+class _SpecialImportRegistry(object):
+    """This class collects special import statements of configuration types"""
+    def __init__(self):
+        self._registry = {}
+
+    def _reset(self):
+        for lst in six.itervalues(self._registry):
+            lst[1] = False
+
+    def registerSpecialImportForType(self, cls, impStatement):
+        className = cls.__name__
+        if className in self._registry:
+            raise RuntimeError("Error: the configuration type '%s' already has an import statement registered '%s'" % (className, self._registry[className][0]))
+        self._registry[className] = [impStatement, False]
+
+    def registerUse(self, obj):
+        className = obj.__class__.__name__
+        try:
+            self._registry[className][1] = True
+        except KeyError:
+            pass
+
+    def getSpecialImports(self):
+        coll = set()
+        for (imp, used) in six.itervalues(self._registry):
+            if used:
+                coll.add(imp)
+        return sorted(coll)
+
+specialImportRegistry = _SpecialImportRegistry()
 
 class _ParameterTypeBase(object):
     """base class for classes which are used as the 'parameters' for a ParameterSet"""
@@ -35,6 +70,7 @@ class _ParameterTypeBase(object):
             return 'cms.'+type(self).__name__
         return 'cms.untracked.'+type(self).__name__
     def dumpPython(self, options=PrintOptions()):
+        specialImportRegistry.registerUse(self)
         return self.pythonTypeName()+"("+self.pythonValue(options)+")"
     def __repr__(self):
         return self.dumpPython()
@@ -74,6 +110,22 @@ class _SimpleParameterTypeBase(_ParameterTypeBase):
         if isinstance(other,_SimpleParameterTypeBase):
             return self._value != other._value
         return self._value != other
+    def __lt__(self,other):
+        if isinstance(other,_SimpleParameterTypeBase):
+            return self._value < other._value
+        return self._value < other
+    def __le__(self,other):
+        if isinstance(other,_SimpleParameterTypeBase):
+            return self._value <= other._value
+        return self._value <= other
+    def __gt__(self,other):
+        if isinstance(other,_SimpleParameterTypeBase):
+            return self._value > other._value
+        return self._value > other
+    def __ge__(self,other):
+        if isinstance(other,_SimpleParameterTypeBase):
+            return self._value >= other._value
+        return self._value >= other
 
 
 class UsingBlock(_SimpleParameterTypeBase):
@@ -98,7 +150,7 @@ class UsingBlock(_SimpleParameterTypeBase):
         #if value == '\0':
         #    value = ''
         parameterSet.addString(self.isTracked(), myname, value)
-    def dumpPython(self, options):
+    def dumpPython(self, options=PrintOptions()):
         if options.isCfg:
             return "process."+self.value()
         else:
@@ -110,6 +162,7 @@ class _Parameterizable(object):
     def __init__(self,*arg,**kargs):
         self.__dict__['_Parameterizable__parameterNames'] = []
         self.__dict__["_isFrozen"] = False
+        self.__dict__['_Parameterizable__validator'] = None
         """The named arguments are the 'parameters' which are added as 'python attributes' to the object"""
         if len(arg) != 0:
             #raise ValueError("unnamed arguments are not allowed. Please use the syntax 'name = value' when assigning arguments.")
@@ -162,7 +215,7 @@ class _Parameterizable(object):
             return getattr(self, params, None)
         for param in params:
             lastParam = getattr(lastParam, param, None)
-            print str(lastParam)
+            print(str(lastParam))
             if lastParam == None:
                 return None
         return lastParam
@@ -176,8 +229,15 @@ class _Parameterizable(object):
         return result
 
     def __addParameter(self, name, value):
+        if name == 'allowAnyLabel_':
+            self.__validator = value
+            self._isModified = True
+            return
         if not isinstance(value,_ParameterTypeBase):
-            self.__raiseBadSetAttr(name)
+            if self.__validator is not None:
+                value = self.__validator.convert_(value)
+            else:
+                self.__raiseBadSetAttr(name)
         if name in self.__dict__:
             message = "Duplicate insert of member " + name
             message += "\nThe original parameters are:\n"
@@ -188,9 +248,14 @@ class _Parameterizable(object):
         self._isModified = True
 
     def __setParameters(self,parameters):
-        for name,value in parameters.iteritems():
+        v = None
+        for name,value in six.iteritems(parameters):
+            if name == 'allowAnyLabel_':
+                v = value
+                continue
             self.__addParameter(name, value)
-
+        if v is not None:
+            self.__validator=v
     def __setattr__(self,name,value):
         #since labels are not supposed to have underscores at the beginning
         # I will assume that if we have such then we are setting an internal variable
@@ -229,9 +294,59 @@ class _Parameterizable(object):
     def __raiseBadSetAttr(name):
         raise TypeError(name+" does not already exist, so it can only be set to a CMS python configuration type")
     def dumpPython(self, options=PrintOptions()):
+        specialImportRegistry.registerUse(self)
+        sortedNames = sorted(self.parameterNames_())
+        if len(sortedNames) > 200:
+        #Too many parameters for a python function call
+        # The solution is to create a temporary dictionary which
+        # is constructed by concatenating long lists (with maximum
+        # 200 entries each) together.
+        # This looks like
+        #  **dict( [(...,...), ...] + [...] + ... )
+            others = []
+            usings = []
+            for name in sortedNames:
+                param = self.__dict__[name]
+                # we don't want minuses in names
+                name2 = name.replace('-','_')
+                options.indent()
+                #_UsingNodes don't get assigned variables
+                if name.startswith("using_"):
+                    usings.append(options.indentation()+param.dumpPython(options))
+                else:
+                    others.append((name2, param.dumpPython(options)))
+                options.unindent()
+
+            resultList = ',\n'.join(usings)
+            longOthers = options.indentation()+"**dict(\n"
+            options.indent()
+            longOthers += options.indentation()+"[\n"
+            entriesInList = 0
+            options.indent()
+            for n,v in others:
+                entriesInList +=1
+                if entriesInList > 200:
+                    #need to start a new list
+                    options.unindent()
+                    longOthers += options.indentation()+"] +\n"+options.indentation()+"[\n"
+                    entriesInList = 0
+                    options.indent()
+                longOthers += options.indentation()+'("'+n+'" , '+v+' ),\n'
+            
+            longOthers += options.indentation()+"]\n"
+            options.unindent()
+            longOthers +=options.indentation()+")\n"
+            options.unindent()
+            ret = []
+            if resultList:
+                ret.append(resultList)
+            if longOthers:
+                ret.append(longOthers)
+            return ",\n".join(ret)
+        #Standard case, small number of parameters
         others = []
         usings = []
-        for name in sorted(self.parameterNames_()):
+        for name in sortedNames:
             param = self.__dict__[name]
             # we don't want minuses in names
             name2 = name.replace('-','_')
@@ -286,24 +401,19 @@ class _TypedParameterizable(_Parameterizable):
         New parameters may be added by specify the exact type
         Modifying existing parameters can be done by just specifying the new
           value without having to specify the type.
+        A parameter may be removed from the clone using the value None.
+           #remove the parameter foo.fred
+           mod.toModify(foo, fred = None)
+        A parameter embedded within a PSet may be changed via a dictionary
+           #change foo.fred.pebbles to 3 and foo.fred.friend to "barney"
+           mod.toModify(foo, fred = dict(pebbles = 3, friend = "barney)) )
         """
         returnValue =_TypedParameterizable.__new__(type(self))
         myparams = self.parameters_()
         if len(myparams) == 0 and len(params) and len(args):
             args.append(None)
-        if len(params):
-            #need to treat items both in params and myparams specially
-            for key,value in params.iteritems():
-                if key in myparams:                    
-                    if isinstance(value,_ParameterTypeBase):
-                        myparams[key] =value
-                    else:
-                        myparams[key].setValue(value)
-                else:
-                    if isinstance(value,_ParameterTypeBase):
-                        myparams[key]=value
-                    else:
-                        self._Parameterizable__raiseBadSetAttr(key)
+        
+        _modifyParametersFromDict(myparams, params, self._Parameterizable__raiseBadSetAttr)
 
         returnValue.__init__(self.__type,*args,
                              **myparams)
@@ -354,23 +464,13 @@ class _TypedParameterizable(_Parameterizable):
         return config
 
     def dumpPython(self, options=PrintOptions()):
+        specialImportRegistry.registerUse(self)
         result = "cms."+str(type(self).__name__)+'("'+self.type_()+'"'
         nparam = len(self.parameterNames_())
         if nparam == 0:
             result += ")\n"
-        elif nparam < 256:
-            result += ",\n"+_Parameterizable.dumpPython(self,options)+options.indentation() + ")\n"
         else:
-            # too big.  Need to dump externally
-            #NOTE: in future should explore just creating a dict
-            #  {'foo':cms.uint32(1), .... }
-            # and pass it to the constructor using the **{...} notation
-            label = ""
-            try:
-               label = "process."+self.label_()
-            except:
-               label = "FIX-THIS"
-            result += ")\n" + self.dumpPythonAttributes(label, options)
+            result += ",\n"+_Parameterizable.dumpPython(self,options)+options.indentation() + ")\n"
         return result
 
     def dumpPythonAttributes(self, myname, options):
@@ -385,6 +485,8 @@ class _TypedParameterizable(_Parameterizable):
         return myname;
     def moduleLabel_(self, myname):
         return myname
+    def appendToProcessDescList_(self, lst, myname):
+        lst.append(self.nameInProcessDesc_(myname))
     def insertInto(self, parameterSet, myname):
         newpset = parameterSet.newPSet()
         newpset.addString(True, "@module_label", self.moduleLabel_(myname))
@@ -431,7 +533,7 @@ class _Labelable(object):
         return str(self.__label)
     def dumpSequenceConfig(self):
         return str(self.__label)
-    def dumpSequencePython(self):
+    def dumpSequencePython(self, options=PrintOptions()):
         return 'process.'+str(self.__label)
     def _findDependencies(self,knownDeps,presentDeps):
         #print 'in labelled'
@@ -537,29 +639,28 @@ class _ValidatingParameterListBase(_ValidatingListBase,_ParameterTypeBase):
     def __repr__(self):
         return self.dumpPython()
     def dumpPython(self, options=PrintOptions()):
+        specialImportRegistry.registerUse(self)
         result = self.pythonTypeName()+"("
         n = len(self)
+        if hasattr(self, "_nPerLine"):
+            nPerLine = self._nPerLine
+        else:
+            nPerLine = 5
+        if n>nPerLine: options.indent()
         if n>=256:
             #wrap in a tuple since they don't have a size constraint
             result+=" ("
-        indented = False
         for i, v in enumerate(self):
             if i == 0:
-                if hasattr(self, "_nPerLine"):
-                    nPerLine = self._nPerLine
-                else:
-                    nPerLine = 5
+                if n>nPerLine: result += '\n'+options.indentation()
             else:
-                if not indented:
-                    indented = True
-                    options.indent()
                 result += ', '
                 if i % nPerLine == 0:
                     result += '\n'+options.indentation()
             result += self.pythonValueForItem(v,options)
-        if indented:
+        if n>nPerLine:
             options.unindent()
-        #result+=', '.join((self.pythonValueForItem(v,options) for v in iter(self)))
+            result += '\n'+options.indentation()
         if n>=256:
             result +=' ) '
         result += ')'
@@ -569,13 +670,55 @@ class _ValidatingParameterListBase(_ValidatingListBase,_ParameterTypeBase):
         return (converter(x).value() for x in strings)
 
 def saveOrigin(obj, level):
-    #frame = inspect.stack()[level+1]
-    frame = inspect.getframeinfo(inspect.currentframe(level+1))
-    # not safe under old python versions
-    #obj._filename = frame.filename
-    #obj._lineNumber = frame.lineno
-    obj._filename = frame[0]
-    obj._lineNumber = frame[1]
+    import sys
+    fInfo = inspect.getframeinfo(sys._getframe(level+1))
+    obj._filename = fInfo.filename
+    obj._lineNumber =fInfo.lineno
+
+def _modifyParametersFromDict(params, newParams, errorRaiser, keyDepth=""):
+    if len(newParams):
+        #need to treat items both in params and myparams specially
+        for key,value in six.iteritems(newParams):
+            if key in params:
+                if value is None:
+                    del params[key]
+                elif isinstance(value, dict):
+                    if isinstance(params[key],_Parameterizable):
+                        pset = params[key]
+                        p =pset.parameters_()
+                        oldkeys = set(p.keys())
+                        _modifyParametersFromDict(p,
+                                                  value,errorRaiser,
+                                                  ("%s.%s" if isinstance(key, str) else "%s[%s]")%(keyDepth,key))
+                        for k,v in six.iteritems(p):
+                            setattr(pset,k,v)
+                            oldkeys.discard(k)
+                        for k in oldkeys:
+                            delattr(pset,k)
+                    elif isinstance(params[key],_ValidatingParameterListBase):
+                        if any(not isinstance(k, int) for k in value.keys()):
+                            raise TypeError("Attempted to change a list using a dict whose keys are not integers")
+                        plist = params[key]
+                        if any((k < 0 or k >= len(plist)) for k in value.keys()):
+                            raise IndexError("Attempted to set an index which is not in the list")
+                        p = dict(enumerate(plist))
+                        _modifyParametersFromDict(p,
+                                                  value,errorRaiser,
+                                                  ("%s.%s" if isinstance(key, str) else "%s[%s]")%(keyDepth,key))
+                        for k,v in six.iteritems(p):
+                            plist[k] = v
+                    else:
+                        raise ValueError("Attempted to change non PSet value "+keyDepth+" using a dictionary")
+                elif isinstance(value,_ParameterTypeBase) or (isinstance(key, int)) or isinstance(value, _Parameterizable):
+                    params[key] = value
+                else:
+                    params[key].setValue(value)
+            else:
+                if isinstance(value,_ParameterTypeBase) or isinstance(value, _Parameterizable):
+                    params[key]=value
+                else:
+                    errorRaiser(key)
+
 
 if __name__ == "__main__":
 
@@ -615,7 +758,7 @@ if __name__ == "__main__":
         def testLargeList(self):
             #lists larger than 255 entries can not be initialized
             #using the constructor
-            args = [i for i in xrange(0,300)]
+            args = [i for i in range(0,300)]
             
             t = TestList(*args)
             pdump= t.dumpPython()
@@ -643,13 +786,37 @@ if __name__ == "__main__":
             class __TestType(_SimpleParameterTypeBase):
                 def _isValid(self,value):
                     return True
-            a = __Test("MyType",t=__TestType(1), u=__TestType(2))
-            b = a.clone(t=3, v=__TestType(4))
+            class __PSet(_ParameterTypeBase,_Parameterizable):
+                def __init__(self,*arg,**args):
+                    #need to call the inits separately
+                    _ParameterTypeBase.__init__(self)
+                    _Parameterizable.__init__(self,*arg,**args)
+            a = __Test("MyType",
+                       t=__TestType(1),
+                       u=__TestType(2),
+                       w = __TestType(3),
+                       x = __PSet(a = __TestType(4),
+                                  b = __TestType(6),
+                                  c = __PSet(gamma = __TestType(5))))
+            b = a.clone(t=3,
+                        v=__TestType(4),
+                        w= None,
+                        x = dict(a = 7,
+                                 c = dict(gamma = 8),
+                                 d = __TestType(9)))
+            c = a.clone(x = dict(a=None, c=None))
             self.assertEqual(a.t.value(),1)
             self.assertEqual(a.u.value(),2)
             self.assertEqual(b.t.value(),3)
             self.assertEqual(b.u.value(),2)
             self.assertEqual(b.v.value(),4)
+            self.assertEqual(b.x.a.value(),7)
+            self.assertEqual(b.x.b.value(),6)
+            self.assertEqual(b.x.c.gamma.value(),8)
+            self.assertEqual(b.x.d.value(),9)
+            self.assertEqual(hasattr(b,"w"), False)
+            self.assertEqual(hasattr(c.x,"a"), False)
+            self.assertEqual(hasattr(c.x,"c"), False)
             self.assertRaises(TypeError,a.clone,None,**{"v":1})
         def testModified(self):
             class __TestType(_SimpleParameterTypeBase):
@@ -663,4 +830,32 @@ if __name__ == "__main__":
             self.assertEqual(a.isModified(),True)
             a.resetModified()
             self.assertEqual(a.isModified(),False)
+        def testLargeParameterizable(self):
+            class tLPTest(_TypedParameterizable):
+                pass
+            class tLPTestType(_SimpleParameterTypeBase):
+                def _isValid(self,value):
+                    return True
+            class __DummyModule(object):
+                def __init__(self):
+                    self.tLPTest = tLPTest
+                    self.tLPTestType = tLPTestType
+            p = tLPTest("MyType",** dict( [ ("a"+str(x), tLPTestType(x)) for x in range(0,300) ] ) )
+            #check they are the same
+            self.assertEqual(p.dumpPython(), eval(p.dumpPython(),{"cms": __DummyModule()}).dumpPython())
+        def testSpecialImportRegistry(self):
+            reg = _SpecialImportRegistry()
+            reg.registerSpecialImportForType(int, "import foo")
+            self.assertRaises(lambda x: reg.registerSpecialImportForType(int, "import bar"))
+            reg.registerSpecialImportForType(str, "import bar")
+            self.assertEqual(reg.getSpecialImports(), [])
+            reg.registerUse([1])
+            self.assertEqual(reg.getSpecialImports(), [])
+            reg.registerUse(1)
+            self.assertEqual(reg.getSpecialImports(), ["import foo"])
+            reg.registerUse(1)
+            self.assertEqual(reg.getSpecialImports(), ["import foo"])
+            reg.registerUse("a")
+            self.assertEqual(reg.getSpecialImports(), ["import bar", "import foo"])
+
     unittest.main()

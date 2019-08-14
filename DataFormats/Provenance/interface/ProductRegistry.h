@@ -12,23 +12,26 @@
 #include "DataFormats/Provenance/interface/BranchKey.h"
 #include "DataFormats/Provenance/interface/BranchListIndex.h"
 #include "DataFormats/Provenance/interface/BranchType.h"
-#include "FWCore/Utilities/interface/ProductHolderIndex.h"
+#include "FWCore/Utilities/interface/ProductResolverIndex.h"
+#include "FWCore/Utilities/interface/get_underlying_safe.h"
 
-#include "boost/array.hpp"
+#include <array>
 #include <memory>
 
 #include <iosfwd>
 #include <map>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
-#include "FWCore/Utilities/interface/HideStdSharedPtrFromRoot.h"
 
 namespace edm {
-  class ProductHolderIndexHelper;
+
+  class ProductResolverIndexHelper;
+  class TypeID;
+  class TypeWithDict;
 
   class ProductRegistry {
-
   public:
     typedef std::map<BranchKey, BranchDescription> ProductList;
 
@@ -45,15 +48,23 @@ namespace edm {
 
     void addProduct(BranchDescription const& productdesc, bool iFromListener = false);
 
-    void addLabelAlias(BranchDescription const& productdesc, std::string const& labelAlias, std::string const& instanceAlias);
+    void addLabelAlias(BranchDescription const& productdesc,
+                       std::string const& labelAlias,
+                       std::string const& instanceAlias);
 
     void copyProduct(BranchDescription const& productdesc);
 
     void setFrozen(bool initializeLookupInfo = true);
 
+    void setFrozen(std::set<TypeID> const& productTypesConsumed,
+                   std::set<TypeID> const& elementTypesConsumed,
+                   std::string const& processName);
+
+    void setUnscheduledProducts(std::set<std::string> const& unscheduledLabels);
+
     std::string merge(ProductRegistry const& other,
-        std::string const& fileName,
-        BranchDescription::MatchMode branchesMustMatch = BranchDescription::Permissive);
+                      std::string const& fileName,
+                      BranchDescription::MatchMode branchesMustMatch = BranchDescription::Permissive);
 
     void updateFromInput(ProductList const& other);
 
@@ -82,75 +93,78 @@ namespace edm {
 
     //NOTE: this is not const since we only want items that have non-const access to this class to be
     // able to call this internal iteration
-    template<typename T>
-    void callForEachBranch(T const& iFunc)  {
+    template <typename T>
+    void callForEachBranch(T const& iFunc) {
       //NOTE: If implementation changes from a map, need to check that iterators are still valid
       // after an insert with the new container, else need to copy the container and iterate over the copy
-      for(ProductRegistry::ProductList::const_iterator itEntry = productList_.begin(),
-          itEntryEnd = productList_.end();
-          itEntry != itEntryEnd; ++itEntry) {
+      for (ProductRegistry::ProductList::const_iterator itEntry = productList_.begin(), itEntryEnd = productList_.end();
+           itEntry != itEntryEnd;
+           ++itEntry) {
         iFunc(itEntry->second);
       }
     }
-    ProductList::size_type size() const {return productList_.size();}
+    ProductList::size_type size() const { return productList_.size(); }
 
     void print(std::ostream& os) const;
 
     bool anyProducts(BranchType const brType) const;
 
-    ConstProductList& constProductList() {
-       //throwIfNotFrozen();
-       return transient_.constProductList_;
-    }
+    std::shared_ptr<ProductResolverIndexHelper const> productLookup(BranchType branchType) const;
+    std::shared_ptr<ProductResolverIndexHelper> productLookup(BranchType branchType);
 
-    std::shared_ptr<ProductHolderIndexHelper> const& productLookup(BranchType branchType) const;
+    // returns the appropriate ProductResolverIndex else ProductResolverIndexInvalid if no BranchID is available
+    ProductResolverIndex indexFrom(BranchID const& iID) const;
 
-    // returns the appropriate ProductHolderIndex else ProductHolderIndexInvalid if no BranchID is available
-    ProductHolderIndex indexFrom(BranchID const& iID) const;
+    bool productProduced(BranchType branchType) const { return transient_.productProduced_[branchType]; }
+    bool anyProductProduced() const { return transient_.anyProductProduced_; }
 
-    bool productProduced(BranchType branchType) const {return transient_.productProduced_[branchType];}
-    bool anyProductProduced() const {return transient_.anyProductProduced_;}
-
-    std::vector<std::string> const& missingDictionaries() const {
-      return transient_.missingDictionaries_;
-    }
-
-    std::vector<std::string>& missingDictionariesForUpdate() {
-      return transient_.missingDictionaries_;
-    }
-
-    std::vector<std::pair<std::string, std::string> > const& aliasToOriginal() const {
+    std::vector<std::pair<std::string, std::string>> const& aliasToOriginal() const {
       return transient_.aliasToOriginal_;
     }
 
-    ProductHolderIndex const& getNextIndexValue(BranchType branchType) const;
+    ProductResolverIndex const& getNextIndexValue(BranchType branchType) const;
 
-    void initializeTransients() {transient_.reset();}
+    void initializeTransients() { transient_.reset(); }
 
-    bool frozen() const {return transient_.frozen_;}
+    bool frozen() const { return transient_.frozen_; }
 
     struct Transients {
       Transients();
       void reset();
+
+      std::shared_ptr<ProductResolverIndexHelper const> eventProductLookup() const {
+        return get_underlying_safe(eventProductLookup_);
+      }
+      std::shared_ptr<ProductResolverIndexHelper>& eventProductLookup() {
+        return get_underlying_safe(eventProductLookup_);
+      }
+      std::shared_ptr<ProductResolverIndexHelper const> lumiProductLookup() const {
+        return get_underlying_safe(lumiProductLookup_);
+      }
+      std::shared_ptr<ProductResolverIndexHelper>& lumiProductLookup() {
+        return get_underlying_safe(lumiProductLookup_);
+      }
+      std::shared_ptr<ProductResolverIndexHelper const> runProductLookup() const {
+        return get_underlying_safe(runProductLookup_);
+      }
+      std::shared_ptr<ProductResolverIndexHelper>& runProductLookup() { return get_underlying_safe(runProductLookup_); }
+
       bool frozen_;
-      ConstProductList constProductList_;
-      // Is at least one (run), (lumi), (event) product produced this process?
-      boost::array<bool, NumBranchTypes> productProduced_;
+      // Is at least one (run), (lumi), (event) persistent product produced this process?
+      std::array<bool, NumBranchTypes> productProduced_;
       bool anyProductProduced_;
 
-      std::shared_ptr<ProductHolderIndexHelper> eventProductLookup_;
-      std::shared_ptr<ProductHolderIndexHelper> lumiProductLookup_;
-      std::shared_ptr<ProductHolderIndexHelper> runProductLookup_;
+      edm::propagate_const<std::shared_ptr<ProductResolverIndexHelper>> eventProductLookup_;
+      edm::propagate_const<std::shared_ptr<ProductResolverIndexHelper>> lumiProductLookup_;
+      edm::propagate_const<std::shared_ptr<ProductResolverIndexHelper>> runProductLookup_;
 
-      ProductHolderIndex eventNextIndexValue_;
-      ProductHolderIndex lumiNextIndexValue_;
-      ProductHolderIndex runNextIndexValue_;
+      ProductResolverIndex eventNextIndexValue_;
+      ProductResolverIndex lumiNextIndexValue_;
+      ProductResolverIndex runNextIndexValue_;
 
-      std::map<BranchID, ProductHolderIndex> branchIDToIndex_;
+      std::map<BranchID, ProductResolverIndex> branchIDToIndex_;
 
-      std::vector<std::string> missingDictionaries_;
-
-      std::vector<std::pair<std::string, std::string> > aliasToOriginal_;
+      std::vector<std::pair<std::string, std::string>> aliasToOriginal_;
     };
 
   private:
@@ -159,39 +173,40 @@ namespace edm {
       transient_.anyProductProduced_ = true;
     }
 
-    void freezeIt(bool frozen = true) {transient_.frozen_ = frozen;}
+    void freezeIt(bool frozen = true) { transient_.frozen_ = frozen; }
 
-    void updateConstProductRegistry();
-    void initializeLookupTables();
+    void initializeLookupTables(std::set<TypeID> const* productTypesConsumed,
+                                std::set<TypeID> const* elementTypesConsumed,
+                                std::string const* processName);
+
+    void checkDictionariesOfConsumedTypes(std::set<TypeID> const* productTypesConsumed,
+                                          std::set<TypeID> const* elementTypesConsumed,
+                                          std::map<TypeID, TypeID> const& containedTypeMap,
+                                          std::map<TypeID, std::vector<TypeWithDict>>& containedTypeToBaseTypesMap);
+
+    void checkForDuplicateProcessName(BranchDescription const& desc, std::string const* processName) const;
+
     virtual void addCalled(BranchDescription const&, bool iFromListener);
     void throwIfNotFrozen() const;
     void throwIfFrozen() const;
 
-    ProductHolderIndex& nextIndexValue(BranchType branchType);
+    ProductResolverIndex& nextIndexValue(BranchType branchType);
 
     ProductList productList_;
     Transients transient_;
   };
 
-  inline
-  bool
-  operator==(ProductRegistry const& a, ProductRegistry const& b) {
+  inline bool operator==(ProductRegistry const& a, ProductRegistry const& b) {
     return a.productList() == b.productList();
   }
 
-  inline
-  bool
-  operator!=(ProductRegistry const& a, ProductRegistry const& b) {
-    return !(a == b);
-  }
+  inline bool operator!=(ProductRegistry const& a, ProductRegistry const& b) { return !(a == b); }
 
-  inline
-  std::ostream&
-  operator<<(std::ostream& os, ProductRegistry const& pr) {
+  inline std::ostream& operator<<(std::ostream& os, ProductRegistry const& pr) {
     pr.print(os);
     return os;
   }
 
-} // edm
+}  // namespace edm
 
 #endif

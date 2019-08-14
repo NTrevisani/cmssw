@@ -12,11 +12,11 @@ is the DataBlock.
 
 ----------------------------------------------------------------------*/
 
-
 #include "DataFormats/Provenance/interface/LuminosityBlockAuxiliary.h"
 #include "DataFormats/Provenance/interface/RunID.h"
 #include "FWCore/Utilities/interface/LuminosityBlockIndex.h"
 #include "FWCore/Framework/interface/Principal.h"
+#include "FWCore/Utilities/interface/propagate_const.h"
 
 #include <memory>
 
@@ -28,103 +28,59 @@ namespace edm {
   class ModuleCallingContext;
   class ProcessHistoryRegistry;
   class RunPrincipal;
-  class UnscheduledHandler;
 
   class LuminosityBlockPrincipal : public Principal {
   public:
     typedef LuminosityBlockAuxiliary Auxiliary;
     typedef Principal Base;
-    LuminosityBlockPrincipal(
-        std::shared_ptr<LuminosityBlockAuxiliary> aux,
-        std::shared_ptr<ProductRegistry const> reg,
-        ProcessConfiguration const& pc,
-        HistoryAppender* historyAppender,
-        unsigned int index);
+    LuminosityBlockPrincipal(std::shared_ptr<ProductRegistry const> reg,
+                             ProcessConfiguration const& pc,
+                             HistoryAppender* historyAppender,
+                             unsigned int index,
+                             bool isForPrimaryProcess = true);
 
-    ~LuminosityBlockPrincipal() {}
+    ~LuminosityBlockPrincipal() override {}
 
-    void fillLuminosityBlockPrincipal(ProcessHistoryRegistry const& processHistoryRegistry, DelayedReader* reader = 0);
+    void fillLuminosityBlockPrincipal(ProcessHistoryRegistry const& processHistoryRegistry,
+                                      DelayedReader* reader = nullptr);
 
-    RunPrincipal const& runPrincipal() const {
-      return *runPrincipal_;
-    }
+    RunPrincipal const& runPrincipal() const { return *runPrincipal_; }
 
-    RunPrincipal& runPrincipal() {
-      return *runPrincipal_;
-    }
+    RunPrincipal& runPrincipal() { return *runPrincipal_; }
 
-    void setRunPrincipal(std::shared_ptr<RunPrincipal> rp) {
-      runPrincipal_ = rp;
-    }
+    void setRunPrincipal(std::shared_ptr<RunPrincipal> rp) { runPrincipal_ = rp; }
 
-    LuminosityBlockIndex index() const {
-      return index_;
-    }
-    
-    LuminosityBlockID id() const {
-      return aux().id();
-    }
+    LuminosityBlockIndex index() const { return index_; }
 
-    Timestamp const& beginTime() const {
-      return aux().beginTime();
-    }
+    LuminosityBlockID id() const { return aux().id(); }
 
-    Timestamp const& endTime() const {
-      return aux().endTime();
-    }
+    Timestamp const& beginTime() const { return aux().beginTime(); }
 
-    void setEndTime(Timestamp const& time) {
-      aux_->setEndTime(time);
-    }
+    Timestamp const& endTime() const { return aux().endTime(); }
 
-    LuminosityBlockNumber_t luminosityBlock() const {
-      return aux().luminosityBlock();
-    }
+    void setEndTime(Timestamp const& time) { aux_.setEndTime(time); }
 
-    LuminosityBlockAuxiliary const& aux() const {
-      return *aux_;
-    }
+    LuminosityBlockNumber_t luminosityBlock() const { return aux().luminosityBlock(); }
 
-    RunNumber_t run() const {
-      return aux().run();
-    }
+    void setAux(LuminosityBlockAuxiliary iAux) { aux_ = std::move(iAux); }
+    LuminosityBlockAuxiliary const& aux() const { return aux_; }
 
-    void mergeAuxiliary(LuminosityBlockAuxiliary const& aux) {
-      return aux_->mergeAuxiliary(aux);
-    }
+    RunNumber_t run() const { return aux().run(); }
 
-    void setUnscheduledHandler(std::shared_ptr<UnscheduledHandler>) {}
+    void mergeAuxiliary(LuminosityBlockAuxiliary const& aux) { return aux_.mergeAuxiliary(aux); }
 
-    void put(
-        BranchDescription const& bd,
-        std::unique_ptr<WrapperBase> edp);
+    void put(BranchDescription const& bd, std::unique_ptr<WrapperBase> edp) const;
 
-
-    void readImmediate() const;
-
-    void setComplete() {
-      complete_ = true;
-    }
+    void put(ProductResolverIndex index, std::unique_ptr<WrapperBase> edp) const;
 
   private:
+    unsigned int transitionIndex_() const override;
 
-    virtual bool isComplete_() const override {return complete_;}
+    edm::propagate_const<std::shared_ptr<RunPrincipal>> runPrincipal_;
 
-    virtual bool unscheduledFill(std::string const&,
-                                 ModuleCallingContext const*) const override {return false;}
-
-    virtual unsigned int transitionIndex_() const override;
-
-    void resolveProductImmediate(ProductHolderBase const& phb) const;
-
-    std::shared_ptr<RunPrincipal> runPrincipal_;
-
-    std::shared_ptr<LuminosityBlockAuxiliary> aux_;
+    LuminosityBlockAuxiliary aux_;
 
     LuminosityBlockIndex index_;
-    
-    bool complete_;
   };
-}
+}  // namespace edm
 #endif
-

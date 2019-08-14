@@ -1,10 +1,4 @@
-#include "TrackingTools/TrackFitters/plugins/KFTrajectorySmootherESProducer.h"
-#include "MagneticField/Engine/interface/MagneticField.h"
-#include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
-
-#include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
-#include "FWCore/Framework/interface/ModuleFactory.h"
 #include "FWCore/Framework/interface/ESProducer.h"
 
 #include "TrackingTools/PatternTools/interface/TrajectoryStateUpdator.h"
@@ -12,48 +6,63 @@
 #include "TrackingTools/PatternTools/interface/TrajectoryStateUpdator.h"
 #include "TrackingTools/KalmanUpdators/interface/Chi2MeasurementEstimatorBase.h"
 
-#include <string>
+#include "FWCore/Framework/interface/ESProducer.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
+#include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
+
+#include "TrackingTools/TrackFitters/interface/TrajectoryFitterRecord.h"
+#include "TrackingTools/Records/interface/TrackingComponentsRecord.h"
+#include "TrackingTools/TrackFitters/interface/KFTrajectorySmoother.h"
 #include <memory>
 
-using namespace edm;
+namespace {
 
-KFTrajectorySmootherESProducer::KFTrajectorySmootherESProducer(const edm::ParameterSet & p) 
-{
-  std::string myname = p.getParameter<std::string>("ComponentName");
-  pset_ = p;
-  setWhatProduced(this,myname);
-}
+  class KFTrajectorySmootherESProducer final : public edm::ESProducer {
+  public:
+    KFTrajectorySmootherESProducer(const edm::ParameterSet& p);
+    std::unique_ptr<TrajectorySmoother> produce(const TrajectoryFitterRecord&);
 
-KFTrajectorySmootherESProducer::~KFTrajectorySmootherESProducer() {}
+    static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+      edm::ParameterSetDescription desc;
+      desc.add<std::string>("ComponentName", "KFSmoother");
+      desc.add<std::string>("Propagator", "PropagatorWithMaterial");
+      desc.add<std::string>("Updator", "KFUpdator");
+      desc.add<std::string>("Estimator", "Chi2");
+      desc.add<std::string>("RecoGeometry", "GlobalDetLayerGeometry");
+      desc.add<double>("errorRescaling", 100);
+      desc.add<int>("minHits", 3);
+      descriptions.add("KFTrajectorySmoother", desc);
+    }
 
-boost::shared_ptr<TrajectorySmoother> 
-KFTrajectorySmootherESProducer::produce(const TrajectoryFitterRecord & iRecord){ 
+  private:
+    edm::ESGetToken<Propagator, TrackingComponentsRecord> propToken_;
+    edm::ESGetToken<TrajectoryStateUpdator, TrackingComponentsRecord> updToken_;
+    edm::ESGetToken<Chi2MeasurementEstimatorBase, TrackingComponentsRecord> estToken_;
+    edm::ESGetToken<DetLayerGeometry, RecoGeometryRecord> geoToken_;
+    const double rescaleFactor_;
+    const int minHits_;
+  };
 
-  std::string pname = pset_.getParameter<std::string>("Propagator");
-  std::string uname = pset_.getParameter<std::string>("Updator");
-  std::string ename = pset_.getParameter<std::string>("Estimator");
-  std::string gname = pset_.getParameter<std::string>("RecoGeometry");
-  double rescaleFactor =  pset_.getParameter<double>("errorRescaling");
-  int minHits = pset_.getParameter<int>("minHits");
+  KFTrajectorySmootherESProducer::KFTrajectorySmootherESProducer(const edm::ParameterSet& p)
+      : rescaleFactor_{p.getParameter<double>("errorRescaling")}, minHits_{p.getParameter<int>("minHits")} {
+    std::string myname = p.getParameter<std::string>("ComponentName");
+    setWhatProduced(this, myname)
+        .setConsumes(propToken_, edm::ESInputTag("", p.getParameter<std::string>("Propagator")))
+        .setConsumes(updToken_, edm::ESInputTag("", p.getParameter<std::string>("Updator")))
+        .setConsumes(estToken_, edm::ESInputTag("", p.getParameter<std::string>("Estimator")))
+        .setConsumes(geoToken_, edm::ESInputTag("", p.getParameter<std::string>("RecoGeometry")));
+  }
 
-  edm::ESHandle<Propagator> prop;
-  edm::ESHandle<TrajectoryStateUpdator> upd;
-  edm::ESHandle<Chi2MeasurementEstimatorBase> est;
-  edm::ESHandle<DetLayerGeometry> geo;
+  std::unique_ptr<TrajectorySmoother> KFTrajectorySmootherESProducer::produce(const TrajectoryFitterRecord& iRecord) {
+    return std::make_unique<KFTrajectorySmoother>(&iRecord.get(propToken_),
+                                                  &iRecord.get(updToken_),
+                                                  &iRecord.get(estToken_),
+                                                  rescaleFactor_,
+                                                  minHits_,
+                                                  &iRecord.get(geoToken_));
+  }
+}  // namespace
 
-
-  iRecord.getRecord<TrackingComponentsRecord>().get(pname, prop);
-  iRecord.getRecord<TrackingComponentsRecord>().get(uname, upd);
-  iRecord.getRecord<TrackingComponentsRecord>().get(ename, est);
-  iRecord.getRecord<RecoGeometryRecord>().get(gname,geo);
-
-  _smoother  = boost::shared_ptr<TrajectorySmoother>(new KFTrajectorySmoother(prop.product(),
-									      upd.product(),
-									      est.product(),
-									      rescaleFactor,
-									      minHits,
-  									      geo.product() ));
-  return _smoother;
-}
-
-
+#include "FWCore/Framework/interface/ModuleFactory.h"
+DEFINE_FWK_EVENTSETUP_MODULE(KFTrajectorySmootherESProducer);

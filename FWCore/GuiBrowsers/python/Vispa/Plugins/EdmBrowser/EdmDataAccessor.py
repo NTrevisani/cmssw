@@ -1,3 +1,4 @@
+from builtins import range
 import logging
 import os.path
 
@@ -20,7 +21,7 @@ def all(container):
   if hasattr(container,'GetEntries'):
     try:
       entries = container.GetEntries()
-      for entry in xrange(entries):
+      for entry in range(entries):
         yield entry
     except:
         raise cmserror("Looping of %s failed" %container) 
@@ -31,7 +32,7 @@ def all(container):
       container = container.ids()
     try:
       entries = container.size()
-      for entry in xrange(entries):
+      for entry in range(entries):
         yield container[entry]
     except:
       pass
@@ -176,11 +177,11 @@ class EdmDataAccessor(BasicDataAccessor, RelativeDataAccessor, ParticleDataAcces
                     value="ERROR: "+self.getType(object)+" object is not available"
                 else:    
                     value=object.get()
-                    if type(value)==type(None):
+                    if isinstance(value, type(None)):
                         value="ERROR: Could not get "+self.getType(object)
                     else:
                         ref=True
-            except Exception, message:
+            except Exception as message:
                 value="ERROR: "+str(message)
         return value,ref
 
@@ -204,7 +205,7 @@ class EdmDataAccessor(BasicDataAccessor, RelativeDataAccessor, ParticleDataAcces
                 split_typestring=typestring.split(" ")
                 templates=0
                 end_typestring=0
-                for i in reversed(range(len(split_typestring))):
+                for i in reversed(list(range(len(split_typestring)))):
                     templates+=split_typestring[i].count("<")
                     templates-=split_typestring[i].count(">")
                     if templates==0:
@@ -221,7 +222,7 @@ class EdmDataAccessor(BasicDataAccessor, RelativeDataAccessor, ParticleDataAcces
             try:
                 object=object()
                 value=object
-            except Exception, message:
+            except Exception as message:
                 value="ERROR: "+str(message)
             if "Buffer" in str(type(value)):
                 return "ERROR: Cannot display object of type "+typ
@@ -288,7 +289,7 @@ class EdmDataAccessor(BasicDataAccessor, RelativeDataAccessor, ParticleDataAcces
                         if not id(daughter) in self._edmMotherRelations.keys():
                             self._edmMotherRelations[id(daughter)]=[]
                         self._edmMotherRelations[id(daughter)]+=[mother]
-                except Exception, message:
+                except Exception as message:
                     logging.error("Cannot read candidate relations: "+str(message))
         return objects
 
@@ -361,7 +362,7 @@ class EdmDataAccessor(BasicDataAccessor, RelativeDataAccessor, ParticleDataAcces
                         properties+=[(objectproperties[property][1],property,objectproperties[property][0])]
                         del objectproperties[property]
             
-        if len(objectproperties.keys())>0:
+        if len(objectproperties)>0:
             properties+=[("Category","Errors","")]
             for property in objectproperties_sorted:
                 if property in objectproperties.keys():
@@ -450,7 +451,7 @@ class EdmDataAccessor(BasicDataAccessor, RelativeDataAccessor, ParticleDataAcces
                     logging.info("Branch is not valid: "+object.branchtuple[0]+".")
                     object.invalid=True
                     return object
-            except Exception, e:
+            except Exception as e:
                 self._edmChildrenObjects[id(object)]=[("ERROR","ERROR: Unable to read branch : "+str(e),False,True)]
                 object.unreadable=True
                 logging.warning("Unable to read branch "+object.branchtuple[0]+" : "+exception_traceback())
@@ -518,7 +519,7 @@ class EdmDataAccessor(BasicDataAccessor, RelativeDataAccessor, ParticleDataAcces
                     branchname=branch.friendlyClassName()+"_"+branch.moduleLabel()+"_"+branch.productInstanceName()+"_"+branch.processName()
                     handle=Handle(branch.fullClassName())
                     self._branches+=[(branchname,handle,branch.moduleLabel(),branch.productInstanceName(),branch.processName())]
-                except Exception, e:
+                except Exception as e:
                     logging.warning("Cannot read branch "+branchname+":"+str(e))
         self._branches.sort(lambda x, y: cmp(x[0], y[0]))
         self._filteredBranches=self._branches[:]

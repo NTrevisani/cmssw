@@ -1,20 +1,21 @@
 import FWCore.ParameterSet.Config as cms
-from Geometry.HcalEventSetup.HcalRelabel_cfi import HcalReLabel
+from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process("HcalGeometryTest")
+process = cms.Process('HcalGeometryTest',eras.Run3)
 
-process.load("Configuration.Geometry.GeometryExtendedPostLS2_cff")
-process.load("Geometry.HcalEventSetup.HcalTopology_cfi")
+# import of standard configurations
+process.load('Configuration.StandardSequences.Services_cff')
+process.load('FWCore.MessageService.MessageLogger_cfi')
+#process.load("Geometry.HcalCommonData.testPhase0GeometryXML_cfi")
+#process.load("Geometry.HcalCommonData.testPhase1GeometryXML_cfi")
+#process.load("Geometry.HcalCommonData.hcalDDConstants_cff")
+#process.load("Geometry.HcalEventSetup.hcalTopologyIdeal_cfi")
+process.load('Configuration.StandardSequences.GeometryRecoDB_cff')
+process.load('Configuration.StandardSequences.GeometrySimDB_cff')
+process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
+from Configuration.AlCa.GlobalTag import GlobalTag
+process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase1_2019_realistic', '')
 
-process.HcalHardcodeGeometryEP = cms.ESProducer( "HcalHardcodeGeometryEP" ,
-                                                 appendToDataLabel = cms.string("_master"),
-                                                 HcalReLabel = HcalReLabel
-                                                 )
-## Comment it out to test std Hcal geometry
-##
-import Geometry.HcalEventSetup.hcalSLHCTopologyConstants_cfi as hcalTopologyConstants_cfi
-process.hcalTopologyIdeal.hcalTopologyConstants = cms.PSet(hcalTopologyConstants_cfi.hcalTopologyConstants)
-##
 
 process.source = cms.Source("EmptySource")
 process.maxEvents = cms.untracked.PSet(
@@ -22,8 +23,8 @@ process.maxEvents = cms.untracked.PSet(
     )
 
 process.hga = cms.EDAnalyzer("HcalGeometryDetIdAnalyzer",
-                             HcalReLabel = HcalReLabel,
-                             HCALGeometryLabel = cms.string("_master") )
+                             UseOldLoader      = cms.bool(False)
+)
 
 process.Timing = cms.Service("Timing")
 process.SimpleMemoryCheck = cms.Service("SimpleMemoryCheck")

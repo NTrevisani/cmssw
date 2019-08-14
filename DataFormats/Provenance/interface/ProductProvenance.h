@@ -10,7 +10,6 @@ and how it came into existence.
 #include "DataFormats/Provenance/interface/BranchID.h"
 #include "DataFormats/Provenance/interface/ParentageID.h"
 #include "DataFormats/Provenance/interface/ProvenanceFwd.h"
-#include "FWCore/Utilities/interface/HideStdSharedPtrFromRoot.h"
 
 #include <memory>
 
@@ -25,54 +24,29 @@ namespace edm {
   class ProductProvenance {
   public:
     ProductProvenance();
-    explicit ProductProvenance(BranchID const& bid);
-    ProductProvenance(BranchID const& bid,
-                      std::shared_ptr<Parentage> parentagePtr);
-    ProductProvenance(BranchID const& bid,
-                      ParentageID const& id);
+    explicit ProductProvenance(BranchID bid);
+    ProductProvenance(BranchID bid, ParentageID id);
 
-    ProductProvenance(BranchID const& bid,
-                      std::vector<BranchID> const& parents);
+    ProductProvenance(BranchID bid, std::vector<BranchID> const& parents);
 
-    ~ProductProvenance() {}
+    ProductProvenance(BranchID bid, std::vector<BranchID>&& parents);
 
     ProductProvenance makeProductProvenance() const;
 
     void write(std::ostream& os) const;
 
-    BranchID const& branchID() const {return branchID_;}
-    ParentageID const& parentageID() const {return parentageID_;}
+    BranchID const& branchID() const { return branchID_; }
+    ParentageID const& parentageID() const { return parentageID_; }
     Parentage const& parentage() const;
 
-    bool& noParentage() const {return transient_.noParentage_;}
-
-    void initializeTransients() const {transient_.reset();}
-
-    struct Transients {
-      Transients();
-      void reset();
-      std::shared_ptr<Parentage> parentagePtr_;
-      bool noParentage_;
-    };
-
   private:
-
-    std::shared_ptr<Parentage>& parentagePtr() const {return transient_.parentagePtr_;}
-
     BranchID branchID_;
     ParentageID parentageID_;
-    mutable Transients transient_;
   };
 
-  inline
-  bool
-  operator<(ProductProvenance const& a, ProductProvenance const& b) {
-    return a.branchID() < b.branchID();
-  }
+  inline bool operator<(ProductProvenance const& a, ProductProvenance const& b) { return a.branchID() < b.branchID(); }
 
-  inline
-  std::ostream&
-  operator<<(std::ostream& os, ProductProvenance const& p) {
+  inline std::ostream& operator<<(std::ostream& os, ProductProvenance const& p) {
     p.write(os);
     return os;
   }
@@ -81,5 +55,5 @@ namespace edm {
   bool operator==(ProductProvenance const& a, ProductProvenance const& b);
   inline bool operator!=(ProductProvenance const& a, ProductProvenance const& b) { return !(a == b); }
   typedef std::vector<ProductProvenance> ProductProvenanceVector;
-}
+}  // namespace edm
 #endif

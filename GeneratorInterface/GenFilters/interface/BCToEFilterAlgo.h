@@ -15,39 +15,33 @@
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/Event.h"
-#include "FWCore/Framework/interface/EventSetup.h"
-#include "FWCore/Framework/interface/MakerMacros.h"
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "FWCore/Utilities/interface/InputTag.h"
+#include "FWCore/Utilities/interface/EDGetToken.h"
 
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 
-
+namespace edm {
+  class ConsumesCollector;
+}
 
 class BCToEFilterAlgo {
- public:
-  BCToEFilterAlgo(const edm::ParameterSet&);
+public:
+  BCToEFilterAlgo(const edm::ParameterSet&, edm::ConsumesCollector&& iC);
   ~BCToEFilterAlgo();
-  
+
   bool filter(const edm::Event& iEvent);
 
   bool hasBCAncestors(const reco::GenParticle& gp);
 
- private:
-
+private:
   bool isBCHadron(const reco::GenParticle& gp);
   bool isBCMeson(const reco::GenParticle& gp);
   bool isBCBaryon(const reco::GenParticle& gp);
 
-  
-
- private:
+private:
   //constants:
   float FILTER_ETA_MAX_;
   //filter parameters:
   float eTThreshold_;
-  edm::InputTag genParSource_;
-  
+  edm::EDGetTokenT<reco::GenParticleCollection> genParSource_;
 };
 #endif

@@ -4,6 +4,7 @@
 
 <library   name="AlignmentMonitorTemplate" file="AlignmentMonitorTemplate.cc">
   <use   name="Alignment/CommonAlignmentMonitor"/>
+  <use   name="Alignment/CommonAlignmentAlgorithm"/>
   <use   name="TrackingTools/TrackFitters"/>
   <use   name="rootcore"/>
   <use   name="roothistmatrix"/>
@@ -13,6 +14,9 @@
 <library   name="AlignmentMonitorGeneric" file="AlignmentMonitorGeneric.cc">
   <use   name="Alignment/CommonAlignment"/>
   <use   name="Alignment/CommonAlignmentMonitor"/>
+  <use   name="Alignment/TrackerAlignment"/>
+  <use   name="Alignment/MuonAlignment"/>
+  <use   name="Alignment/CommonAlignmentAlgorithm"/>
   <use   name="TrackingTools/TrackFitters"/>
   <use   name="DataFormats/GeometrySurface"/>
   <use   name="rootcore"/>
@@ -57,6 +61,9 @@
 </library>
 
 <library   name="AlignmentMonitorSurvey" file="AlignmentMonitorSurvey.cc">
+  <use   name="Alignment/TrackerAlignment"/>
+  <use   name="Alignment/MuonAlignment"/>
+  <use   name="Alignment/CommonAlignmentAlgorithm"/>
   <use   name="Alignment/CommonAlignment"/>
   <use   name="Alignment/CommonAlignmentMonitor"/>
   <flags   EDM_PLUGIN="1"/>
@@ -69,6 +76,7 @@
   <use   name="Alignment/MuonAlignment"/>
   <use   name="CondFormats/AlignmentRecord"/>
   <use   name="CondFormats/Alignment"/>
+  <use   name="CondFormats/GeometryObjects"/>
   <flags   EDM_PLUGIN="1"/>
 </library>
 
@@ -106,6 +114,7 @@
   <use   name="DataFormats/Alignment"/>
   <use   name="DataFormats/TrackReco"/>
   <use   name="DataFormats/TrackerRecHit2D"/>
+  <use   name="Utilities/General"/>
   <use   name="rootcore"/>
   <flags   EDM_PLUGIN="1"/>
 </library>

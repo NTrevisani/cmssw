@@ -85,6 +85,9 @@ PATH=/afs/cern.ch/work/r/rovere/protocolbuf/bin
 #include <string>
 #include <iostream>
 #include <memory>
+#include <thread>
+#include <mutex>
+#include <list>
 #include "DQMServices/Core/src/ROOTFilePB.pb.h"
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/gzip_stream.h>
@@ -95,99 +98,82 @@ PATH=/afs/cern.ch/work/r/rovere/protocolbuf/bin
 #include <TObject.h>
 #include <TObjString.h>
 #include <TH1.h>
+#include <TProfile.h>
 #include <TKey.h>
+#include <TClass.h>
 
-#define DEBUG(x, msg) if (debug >= x) std::cout << "DEBUG: " << msg << std::flush
+#include <sys/prctl.h>
+#include <sys/wait.h>
+#include <csignal>
+
+#define DEBUG(x, msg) \
+  if (debug >= x)     \
+  std::cout << "DEBUG: " << msg << std::flush
 
 int debug = 0;
 
-static bool lessThanMME(const std::string &lhs_dirname,
-                        const std::string &lhs_objname,
-                        const std::string &rhs_dirname,
-                        const std::string &rhs_objname) {
-  int diff = lhs_dirname.compare(rhs_dirname);
-  return (diff < 0 ? true
-          : diff == 0 ? lhs_objname < rhs_objname : false);
-};
-
 struct MicroME {
-  MicroME(const std::string * full,
-          const std::string * dir,
-          const std::string * obj,
-          uint32_t flags = 0)
-      :fullname(full), dirname(dir), objname(obj), flags(flags) {}
-  const std::string * fullname;
-  const std::string * dirname;
-  const std::string * objname;
-  mutable TObject * obj;
+  MicroME(TObject *o, const std::string &dir, const std::string &obj, uint32_t flags = 0)
+      : obj(o), dirname(dir), objname(obj), flags(flags) {}
+
+  mutable TObject *obj;
+
+  const std::string dirname;
+  const std::string objname;
 
   uint32_t flags;
 
   bool operator<(const MicroME &rhs) const {
-    return lessThanMME(*this->dirname,
-                       *this->objname,
-                       *rhs.dirname,
-                       *rhs.objname);
+    const MicroME &lhs = *this;
+    int diff = lhs.dirname.compare(rhs.dirname);
+    return (diff < 0 ? true : diff == 0 ? lhs.objname < rhs.objname : false);
   };
 
   void add(TObject *obj_to_add) const {
-      DEBUG(1, "Merging: " << obj->GetName() <<
-        " << " << obj_to_add->GetName() << std::endl);
+    DEBUG(1, "Merging: " << obj->GetName() << " << " << obj_to_add->GetName() << std::endl);
 
-      if (dynamic_cast<TH1 *>(obj) && dynamic_cast<TH1 *>(obj_to_add)) {
-        dynamic_cast<TH1 *>(obj)->Add(dynamic_cast<TH1 *>(obj_to_add));
-      } else if (dynamic_cast<TObjString *>(obj) && dynamic_cast<TObjString *>(obj_to_add)) {
-
-
-      } else {
-        DEBUG(1, "Cannot merge (different types): " << obj->GetName() <<
-          " << " << obj_to_add->GetName() << std::endl);
-      }
+    if (dynamic_cast<TH1 *>(obj) && dynamic_cast<TH1 *>(obj_to_add)) {
+      dynamic_cast<TH1 *>(obj)->Add(dynamic_cast<TH1 *>(obj_to_add));
+    } else if (dynamic_cast<TObjString *>(obj) && dynamic_cast<TObjString *>(obj_to_add)) {
+    } else {
+      DEBUG(1, "Cannot merge (different types): " << obj->GetName() << " << " << obj_to_add->GetName() << std::endl);
+    }
   };
+
+  const std::string fullname() const { return dirname + '/' + objname; };
 };
 
-enum TaskType {
-  TASK_ADD,
-  TASK_DUMP,
-  TASK_CONVERT,
-  TASK_ENCODE
-};
+using MEStore = std::set<MicroME>;
 
-enum ErrType {
-  ERR_BADCFG=1,
-  ERR_NOFILE
-};
+enum TaskType { TASK_ADD, TASK_DUMP, TASK_CONVERT, TASK_ENCODE };
 
+enum ErrType { ERR_BADCFG = 1, ERR_NOFILE };
+
+using google::protobuf::io::ArrayInputStream;
+using google::protobuf::io::CodedInputStream;
 using google::protobuf::io::FileInputStream;
 using google::protobuf::io::FileOutputStream;
 using google::protobuf::io::GzipInputStream;
 using google::protobuf::io::GzipOutputStream;
-using google::protobuf::io::CodedInputStream;
-using google::protobuf::io::ArrayInputStream;
 
 /** Extract the next serialised ROOT object from @a buf. Returns null
 if there are no more objects in the buffer, or a null pointer was
 serialised at this location. */
-inline TObject * extractNextObject(TBufferFile &buf) {
+inline TObject *extractNextObject(TBufferFile &buf) {
   if (buf.Length() == buf.BufferSize())
-    return 0;
+    return nullptr;
+
   buf.InitMap();
-  return reinterpret_cast<TObject *>(buf.ReadObjectAny(0));
+  return reinterpret_cast<TObject *>(buf.ReadObjectAny(nullptr));
 }
 
-static void get_info(const dqmstorepb::ROOTFilePB::Histo &h,
-                     std::string &dirname,
-                     std::string &objname,
-                     TObject ** obj) {
-
+static void get_info(const dqmstorepb::ROOTFilePB::Histo &h, std::string &dirname, std::string &objname, TObject **obj) {
   size_t slash = h.full_pathname().rfind('/');
   size_t dirpos = (slash == std::string::npos ? 0 : slash);
-  size_t namepos = (slash == std::string::npos ? 0 : slash+1);
+  size_t namepos = (slash == std::string::npos ? 0 : slash + 1);
   dirname.assign(h.full_pathname(), 0, dirpos);
   objname.assign(h.full_pathname(), namepos, std::string::npos);
-  TBufferFile buf(TBufferFile::kRead, h.size(),
-                  (void*)h.streamed_histo().data(),
-                  kFALSE);
+  TBufferFile buf(TBufferFile::kRead, h.size(), (void *)h.streamed_histo().data(), kFALSE);
   buf.Reset();
   *obj = extractNextObject(buf);
   if (!*obj) {
@@ -195,113 +181,90 @@ static void get_info(const dqmstorepb::ROOTFilePB::Histo &h,
   }
 }
 
-void writeMessage(const dqmstorepb::ROOTFilePB &dqmstore_output_msg,
-                  const std::string &output_filename) {
-
-  DEBUG(1, "Writing file" << std::endl);
-
-  int out_fd = ::open(output_filename.c_str(),
-                      O_WRONLY | O_CREAT | O_TRUNC,
-                      S_IRUSR | S_IWUSR |
-                      S_IRGRP | S_IWGRP |
-                      S_IROTH);
-
+void writeMessageFD(const dqmstorepb::ROOTFilePB &dqmstore_output_msg, int out_fd) {
   FileOutputStream out_stream(out_fd);
   GzipOutputStream::Options options;
   options.format = GzipOutputStream::GZIP;
   options.compression_level = 2;
-  GzipOutputStream gzip_stream(&out_stream,
-                               options);
+  GzipOutputStream gzip_stream(&out_stream, options);
   dqmstore_output_msg.SerializeToZeroCopyStream(&gzip_stream);
 
   // make sure we flush before close
   gzip_stream.Close();
   out_stream.Close();
+}
+
+void writeMessage(const dqmstorepb::ROOTFilePB &dqmstore_output_msg, const std::string &output_filename) {
+  DEBUG(1, "Writing file" << std::endl);
+
+  int out_fd =
+      ::open(output_filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+
+  writeMessageFD(dqmstore_output_msg, out_fd);
   ::close(out_fd);
 }
 
-
-void fillMessage(dqmstorepb::ROOTFilePB &dqmstore_output_msg,
-                 const std::set<MicroME> & micromes) {
-  std::set<MicroME>::iterator mi = micromes.begin();
-  std::set<MicroME>::iterator me = micromes.end();
+void fillMessage(dqmstorepb::ROOTFilePB &dqmstore_output_msg, const MEStore &micromes) {
+  auto mi = micromes.begin();
+  auto me = micromes.end();
 
   DEBUG(1, "Streaming ROOT objects" << std::endl);
   for (; mi != me; ++mi) {
-    dqmstorepb::ROOTFilePB::Histo* h = dqmstore_output_msg.add_histo();
-    DEBUG(2, "Streaming ROOT object " << *(mi->fullname) << "\n");
-    h->set_full_pathname(*(mi->fullname));
+    dqmstorepb::ROOTFilePB::Histo *h = dqmstore_output_msg.add_histo();
+    DEBUG(2, "Streaming ROOT object " << mi->fullname() << "\n");
+    h->set_full_pathname(mi->fullname());
     TBufferFile buffer(TBufferFile::kWrite);
     buffer.WriteObject(mi->obj);
     h->set_size(buffer.Length());
     h->set_flags(mi->flags);
-    h->set_streamed_histo((const void*)buffer.Buffer(),
-                          buffer.Length());
+    h->set_streamed_histo((const void *)buffer.Buffer(), buffer.Length());
     delete mi->obj;
   }
 }
 
-
-void processDirectory(TFile *file,
-                      const std::string& curdir,
-                      std::set<std::string> &dirs,
-                      std::set<std::string> &objs,
-                      std::set<std::string> &fullnames,
-                      std::set<MicroME>& micromes) {
+void processDirectory(TFile *file, const std::string &curdir, MEStore &micromes) {
   DEBUG(1, "Processing directory " << curdir << "\n");
   file->cd(curdir.c_str());
   TKey *key;
-  TIter next (gDirectory->GetListOfKeys());
-  while ((key = (TKey *) next())) {
-    TObject * obj = key->ReadObj();
+  TIter next(gDirectory->GetListOfKeys());
+  while ((key = (TKey *)next())) {
+    TObject *obj = key->ReadObj();
     if (dynamic_cast<TDirectory *>(obj)) {
       std::string subdir;
       subdir.reserve(curdir.size() + strlen(obj->GetName()) + 2);
       subdir += curdir;
-      if (! curdir.empty())
+      if (!curdir.empty())
         subdir += '/';
       subdir += obj->GetName();
-      processDirectory(file, subdir, dirs, objs, fullnames, micromes);
+      processDirectory(file, subdir, micromes);
     } else if ((dynamic_cast<TH1 *>(obj)) || (dynamic_cast<TObjString *>(obj))) {
       if (dynamic_cast<TH1 *>(obj)) {
-        dynamic_cast<TH1 *>(obj)->SetDirectory(0);
+        dynamic_cast<TH1 *>(obj)->SetDirectory(nullptr);
       }
 
       DEBUG(2, curdir << "/" << obj->GetName() << "\n");
-      MicroME mme(&*(fullnames.insert(curdir
-                                      + '/'
-                                      + std::string(obj->GetName())).first),
-                     &*(dirs.insert(curdir).first),
-                     &*(objs.insert(obj->GetName()).first));
-      if (obj) {
-        mme.obj = obj;
-        micromes.insert(mme);
-      }
+      MicroME mme(obj, curdir, obj->GetName());
+
+      micromes.insert(mme);
     }
   }
 }
 
-
-int encodeFile(const std::string &output_filename,
-               const std::vector<std::string> &filenames) {
+int encodeFile(const std::string &output_filename, const std::vector<std::string> &filenames) {
   assert(filenames.size() == 1);
   TFile input(filenames[0].c_str());
   DEBUG(0, "Encoding file " << filenames[0] << std::endl);
-  std::set<std::string> dirs;
-  std::set<std::string> objs;
-  std::set<std::string> fullnames;
-  std::set<MicroME> micromes;
+  MEStore micromes;
   dqmstorepb::ROOTFilePB dqmstore_message;
 
-  processDirectory(&input, "", dirs, objs, fullnames, micromes);
+  processDirectory(&input, "", micromes);
   fillMessage(dqmstore_message, micromes);
   writeMessage(dqmstore_message, output_filename);
 
   return 0;
 }
 
-int convertFile(const std::string &output_filename,
-                const std::vector<std::string> &filenames) {
+int convertFile(const std::string &output_filename, const std::vector<std::string> &filenames) {
   assert(filenames.size() == 1);
   TFile output(output_filename.c_str(), "RECREATE");
   DEBUG(0, "Converting file " << filenames[0] << std::endl);
@@ -311,42 +274,38 @@ int convertFile(const std::string &output_filename,
   FileInputStream fin(filedescriptor);
   GzipInputStream input(&fin);
   CodedInputStream input_coded(&input);
-  input_coded.SetTotalBytesLimit(1024*1024*1024, -1);
+  input_coded.SetTotalBytesLimit(1024 * 1024 * 1024, -1);
   if (!dqmstore_message.ParseFromCodedStream(&input_coded)) {
-    std::cout << "Fatal Error opening file "
-              << filenames[0] << std::endl;
+    std::cout << "Fatal Error opening file " << filenames[0] << std::endl;
     return ERR_NOFILE;
   }
   ::close(filedescriptor);
 
   for (int i = 0; i < dqmstore_message.histo_size(); i++) {
-    const dqmstorepb::ROOTFilePB::Histo& h = dqmstore_message.histo(i);
+    const dqmstorepb::ROOTFilePB::Histo &h = dqmstore_message.histo(i);
     DEBUG(1, h.full_pathname() << std::endl);
     DEBUG(1, h.size() << std::endl);
-    TBufferFile buf(TBufferFile::kRead, h.size(),
-                    (void*)h.streamed_histo().data(),
-                    kFALSE);
+    TBufferFile buf(TBufferFile::kRead, h.size(), (void *)h.streamed_histo().data(), kFALSE);
     buf.Reset();
     TObject *obj = extractNextObject(buf);
-    std::string path,objname;
+    std::string path, objname;
     get_info(h, path, objname, &obj);
     gDirectory->cd("/");
     // Find the first path component.
     size_t start = 0;
     size_t end = path.find('/', start);
     if (end == std::string::npos)
-    end = path.size();
-    while (true)
-    {
-      std::string part(path, start, end-start);
-      if (! gDirectory->Get(part.c_str()))
+      end = path.size();
+    while (true) {
+      std::string part(path, start, end - start);
+      if (!gDirectory->Get(part.c_str()))
         gDirectory->mkdir(part.c_str());
       gDirectory->cd(part.c_str());
       // Stop if we reached the end, ignoring any trailing '/'.
-      if (end+1 >= path.size())
+      if (end + 1 >= path.size())
         break;
       // Find the next path component.
-      start = end+1;
+      start = end + 1;
       end = path.find('/', start);
       if (end == std::string::npos)
         end = path.size();
@@ -359,7 +318,7 @@ int convertFile(const std::string &output_filename,
 }
 
 int dumpFiles(const std::vector<std::string> &filenames) {
-  assert(filenames.size() > 0);
+  assert(!filenames.empty());
   for (int i = 0, e = filenames.size(); i != e; ++i) {
     DEBUG(0, "Dumping file " << filenames[i] << std::endl);
     dqmstorepb::ROOTFilePB dqmstore_message;
@@ -368,21 +327,18 @@ int dumpFiles(const std::vector<std::string> &filenames) {
     FileInputStream fin(filedescriptor);
     GzipInputStream input(&fin);
     CodedInputStream input_coded(&input);
-    input_coded.SetTotalBytesLimit(1024*1024*1024, -1);
+    input_coded.SetTotalBytesLimit(1024 * 1024 * 1024, -1);
     if (!dqmstore_message.ParseFromCodedStream(&input_coded)) {
-      std::cout << "Fatal Error opening file "
-                << filenames[0] << std::endl;
+      std::cout << "Fatal Error opening file " << filenames[0] << std::endl;
       return ERR_NOFILE;
     }
     ::close(filedescriptor);
 
     for (int i = 0; i < dqmstore_message.histo_size(); i++) {
-      const dqmstorepb::ROOTFilePB::Histo& h = dqmstore_message.histo(i);
+      const dqmstorepb::ROOTFilePB::Histo &h = dqmstore_message.histo(i);
       DEBUG(1, h.full_pathname() << std::endl);
       DEBUG(1, h.size() << std::endl);
-      TBufferFile buf(TBufferFile::kRead, h.size(),
-                      (void*)h.streamed_histo().data(),
-                      kFALSE);
+      TBufferFile buf(TBufferFile::kRead, h.size(), (void *)h.streamed_histo().data(), kFALSE);
       buf.Reset();
       TObject *obj = extractNextObject(buf);
       DEBUG(1, obj->GetName() << std::endl);
@@ -393,173 +349,171 @@ int dumpFiles(const std::vector<std::string> &filenames) {
   return 0;
 }
 
-int addFiles(const std::string &output_filename,
-             const std::vector<std::string> &filenames) {
-  dqmstorepb::ROOTFilePB dqmstore_outputmessage;
-  std::set<std::string> dirs;
-  std::set<std::string> objs;
-  std::set<std::string> fullnames;
-  std::set<MicroME> micromes;
+int addFile(MEStore &micromes, int fd) {
+  dqmstorepb::ROOTFilePB dqmstore_msg;
 
-  assert(filenames.size() > 0);
-  DEBUG(1, "Adding file " << filenames[0] << std::endl);
-  {
-    dqmstorepb::ROOTFilePB dqmstore_message;
-    int filedescriptor;
-    if ((filedescriptor = ::open(filenames[0].c_str(), O_RDONLY)) == -1) {
-      std::cout << "Fatal Error opening file "
-                << filenames[0] << std::endl;
-      return ERR_NOFILE;
-    }
-
-    FileInputStream fin(filedescriptor);
-    GzipInputStream input(&fin);
-    CodedInputStream input_coded(&input);
-    input_coded.SetTotalBytesLimit(1024*1024*1024, -1);
-    if (!dqmstore_message.ParseFromCodedStream(&input_coded)) {
-      std::cout << "Fatal Error opening file "
-                << filenames[0] << std::endl;
-      return ERR_NOFILE;
-    }
-    ::close(filedescriptor);
-
-    for (int i = 0; i < dqmstore_message.histo_size(); i++) {
-      std::string path;
-      std::string objname;
-      TObject *obj = NULL;
-      const dqmstorepb::ROOTFilePB::Histo &h = dqmstore_message.histo(i);
-      get_info(h, path, objname, &obj);
-      MicroME * mme = new MicroME(&*(fullnames.insert(h.full_pathname()).first),
-                                  &*(dirs.insert(path).first),
-                                  &*(objs.insert(objname).first),
-                                  h.flags());
-      if (obj) {
-        mme->obj = obj;
-        micromes.insert(*mme);
-        DEBUG(2, "Inserting MicroME " << *mme->fullname << std::endl);
-      }
-    }
+  FileInputStream fin(fd);
+  GzipInputStream input(&fin);
+  CodedInputStream input_coded(&input);
+  input_coded.SetTotalBytesLimit(1024 * 1024 * 1024, -1);
+  if (!dqmstore_msg.ParseFromCodedStream(&input_coded)) {
+    std::cout << "Fatal decoding stream: " << fd << std::endl;
+    return ERR_NOFILE;
   }
 
-  for (int i = 1, e = filenames.size(); i != e; ++i) {
-    DEBUG(1, "Adding file " << filenames[i] << std::endl);
-    dqmstorepb::ROOTFilePB dqmstore_msg;
-    int filedescriptor;
-    if ((filedescriptor = ::open(filenames[i].c_str(), O_RDONLY)) == -1) {
-      std::cout << "Fatal Error opening file "
-                << filenames[i] << std::endl;
-      return ERR_NOFILE;
-    }
-    FileInputStream fin(filedescriptor);
-    GzipInputStream input(&fin);
-    CodedInputStream input_coded(&input);
-    input_coded.SetTotalBytesLimit(1024*1024*1024, -1);
-    if (!dqmstore_msg.ParseFromCodedStream(&input_coded)) {
-      std::cout << "Fatal Error opening file "
-                << filenames[0] << std::endl;
-      return ERR_NOFILE;
-    }
-    ::close(filedescriptor);
+  auto hint = micromes.begin();
+  for (int i = 0; i < dqmstore_msg.histo_size(); i++) {
+    std::string path;
+    std::string objname;
+    TObject *obj = nullptr;
+    const dqmstorepb::ROOTFilePB::Histo &h = dqmstore_msg.histo(i);
+    get_info(h, path, objname, &obj);
 
-    std::set<MicroME>::iterator mi = micromes.begin();
-    std::set<MicroME>::iterator me = micromes.end();
-    int elem = 0;
-    for (; mi != me; ++mi) {
-      std::string path;
-      std::string objname;
-      dqmstorepb::ROOTFilePB::Histo h;
-      TObject *obj = NULL;
-      if (elem < dqmstore_msg.histo_size()) {
-        dqmstorepb::ROOTFilePB::Histo &h =
-            const_cast<dqmstorepb::ROOTFilePB::Histo &>(dqmstore_msg.histo(elem));
-        get_info(h, path, objname, &obj);
+    MicroME mme(nullptr, path, objname, h.flags());
+    auto ir = micromes.insert(hint, mme);
+    if (ir->obj != nullptr) {
+      // new element was not added
+      // so we merge
 
-        DEBUG(2, "Comparing " << *(*mi).dirname << "/"
-              << *(*mi).objname << " vs "
-              << h.full_pathname() << std::endl);
-        int diff = (*mi).fullname->compare(h.full_pathname());
-        if (diff == 0 && obj != NULL) {
-          mi->add(obj);
-          delete obj;
-          ++elem;
-        } else if (! lessThanMME(*(*mi).dirname, *(*mi).objname,
-                                 path, objname)) {
-          // loop over elem till they are no longer less than iterator.
-          bool loop = true;
-          while (loop) {
-            DEBUG(2, "Adding Missing histogram "
-                  << h.full_pathname() << std::endl);
-            // That's fine since we add elements to the left of the
-            // current node, so we do not screw up the iteration
-            // process.
-            MicroME * mme = new MicroME(&*(fullnames.insert(h.full_pathname()).first),
-                                        &*(dirs.insert(path).first),
-                                        &*(objs.insert(objname).first));
-            if (obj) {
-              mme->obj = obj;
-              micromes.insert(*mme);
-              ++elem;
-            }
-            if (elem < dqmstore_msg.histo_size()) {
-              h = const_cast<dqmstorepb::ROOTFilePB::Histo &>(dqmstore_msg.histo(elem));
-              get_info(h, path, objname, &obj);
-              DEBUG(2, "Comparing " << *(*mi).dirname << "/"
-                    << *(*mi).objname << " vs "
-                    << h.full_pathname() << std::endl);
-              loop = ! lessThanMME(*(*mi).dirname, *(*mi).objname,
-                                   path, objname);
-            } else {
-              loop = false;
-            }
-          }
-        }
-      }
+      ir->add(obj);
+      delete obj;
+      DEBUG(2, "Merged MicroME " << mme.fullname() << std::endl);
+    } else {
+      ir->obj = obj;
+      DEBUG(2, "Inserted MicroME " << mme.fullname() << std::endl);
     }
 
-    // Transfer whatever else is left pending in the new file.
-    while (elem < dqmstore_msg.histo_size()) {
-      std::string path;
-      std::string objname;
-      TObject *obj = NULL;
-
-      const dqmstorepb::ROOTFilePB::Histo &h = dqmstore_msg.histo(elem);
-      get_info(h, path, objname, &obj);
-      DEBUG(2, "Adding Missing histogram " << h.full_pathname() << std::endl);
-      MicroME * mme = new MicroME(&*(fullnames.insert(h.full_pathname()).first),
-                                  &*(dirs.insert(path).first),
-                                  &*(objs.insert(objname).first));
-      if (obj) {
-        mme->obj = obj;
-        micromes.insert(*mme);
-        ++elem;
-      }
-    }
+    hint = ir;
+    ++hint;
   }
-
-  dqmstorepb::ROOTFilePB dqmstore_output_msg;
-  fillMessage(dqmstore_output_msg, micromes);
-  writeMessage(dqmstore_output_msg, output_filename);
 
   return 0;
 }
 
-static int
-showusage(void)
-{
+// The idea is to preload root library (before forking).
+// Which is significant for performance and especially memory usage,
+// because root aakes a long time to init (and somehow manages to launch a subshell).
+void tryRootPreload() {
+  // write a single histogram
+  TH1F obj_th1f("preload_th1f", "preload_th1f", 2, 0, 1);
+
+  TBufferFile write_buffer(TBufferFile::kWrite);
+  write_buffer.WriteObject(&obj_th1f);
+
+  dqmstorepb::ROOTFilePB preload_file;
+  dqmstorepb::ROOTFilePB::Histo *hw = preload_file.add_histo();
+  hw->set_size(write_buffer.Length());
+  hw->set_flags(0);
+  hw->set_streamed_histo((const void *)write_buffer.Buffer(), write_buffer.Length());
+
+  // now load this th1f
+  const dqmstorepb::ROOTFilePB::Histo &hr = preload_file.histo(0);
+  std::string path;
+  std::string objname;
+  TObject *obj = nullptr;
+  get_info(hr, path, objname, &obj);
+  delete obj;
+
+  // all done
+}
+
+/* fork_id represents the position in a node (node number). */
+void addFilesWithFork(int parent_fd,
+                      const int fork_id,
+                      const int fork_total,
+                      const std::vector<std::string> &filenames) {
+  DEBUG(1, "Start process: " << fork_id << " parent: " << (fork_id / 2) << std::endl);
+
+  std::list<std::pair<int, int> > children;
+
+  // if this node has a subtree, start it
+  for (int i = 0; i < 2; ++i) {
+    int child_id = fork_id * 2 + i;
+    if (child_id > fork_total)
+      continue;
+
+    int fd[2];
+    ::pipe(fd);
+
+    int child_pid = ::fork();
+    if (child_pid == 0) {
+      ::prctl(PR_SET_PDEATHSIG, SIGKILL);
+      ::close(fd[0]);  // close read end
+
+      addFilesWithFork(fd[1], child_id, fork_total, filenames);
+      ::close(fd[1]);
+
+      ::_exit(0);
+    } else {
+      ::close(fd[1]);  // close write end
+      children.push_back(std::make_pair(fd[0], child_pid));
+    }
+  }
+
+  // merge all my files
+  MEStore microme;
+
+  // select the filenames to process
+  // with threads=1, this just selects all the files
+  for (unsigned int fi = fork_id - 1; fi < filenames.size(); fi += fork_total) {
+    const std::string &file = filenames[fi];
+    DEBUG(1, "Adding file " << file << std::endl);
+
+    int filedescriptor;
+    if ((filedescriptor = ::open(file.c_str(), O_RDONLY)) == -1) {
+      std::cout << "Fatal Error opening file " << file << std::endl;
+
+      exit(ERR_NOFILE);
+    }
+
+    addFile(microme, filedescriptor);
+    ::close(filedescriptor);
+  }
+
+  // merge all children
+  for (auto &chpair : children) {
+    int fd = chpair.first;
+    addFile(microme, fd);
+    ::close(fd);
+
+    // collect the child, not necessary, but avoids <defunct>
+    int status;
+    ::waitpid(chpair.second, &status, 0);
+  }
+
+  // output everything to fd
+  dqmstorepb::ROOTFilePB dqmstore_output_msg;
+  fillMessage(dqmstore_output_msg, microme);
+  writeMessageFD(dqmstore_output_msg, parent_fd);
+};
+
+int addFiles(const std::string &output_filename, const std::vector<std::string> &filenames, int nthreads) {
+  tryRootPreload();
+
+  DEBUG(1, "Writing file" << std::endl);
+  int out_fd =
+      ::open(output_filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+
+  addFilesWithFork(out_fd, 1, nthreads, filenames);
+  ::close(out_fd);
+
+  return 0;
+}
+
+static int showusage() {
   static const std::string app_name("fasthadd");
 
-  std::cerr << "Usage: " << app_name
-            << " [--[no-]debug] TASK OPTIONS\n\n  "
-            << app_name << " [OPTIONS] add -o OUTPUT_FILE [DAT FILE...]\n  "
-            << app_name << " [OPTIONS] convert -o ROOT_FILE DAT_FILE\n  "
-            << app_name << " [OPTIONS] encode -o DAT_FILE ROOT_FILE\n  "
-            << app_name << " [OPTIONS] dump [DAT FILE...]\n  ";
+  std::cerr << "Usage: " << app_name << " [--[no-]debug] TASK OPTIONS\n\n  " << app_name
+            << " [OPTIONS] add [-j NUM_THREADS] -o OUTPUT_FILE [DAT FILE...]\n  " << app_name
+            << " [OPTIONS] convert -o ROOT_FILE DAT_FILE\n  " << app_name
+            << " [OPTIONS] encode -o DAT_FILE ROOT_FILE\n  " << app_name << " [OPTIONS] dump [DAT FILE...]\n  ";
   return ERR_BADCFG;
 }
 
-int main(int argc, char * argv[]) {
+int main(int argc, char *argv[]) {
   int arg;
   int ret = 0;
+  int jobs = 1;
   std::string output_file;
   std::vector<std::string> filenames;
   TaskType task;
@@ -567,26 +521,25 @@ int main(int argc, char * argv[]) {
   filenames.reserve(argc);
 
   for (arg = 1; arg < argc; ++arg) {
-    if (! strcmp(argv[arg], "--no-debug"))
+    if (!strcmp(argv[arg], "--no-debug"))
       debug = 0;
-    else if (! strcmp(argv[arg], "--debug")
-             || ! strcmp(argv[arg], "-d"))
+    else if (!strcmp(argv[arg], "--debug") || !strcmp(argv[arg], "-d"))
       debug++;
     else
       break;
   }
 
   if (arg < argc) {
-    if (! strcmp(argv[arg], "add")) {
+    if (!strcmp(argv[arg], "add")) {
       ++arg;
       task = TASK_ADD;
-    } else if (! strcmp(argv[arg], "dump")) {
+    } else if (!strcmp(argv[arg], "dump")) {
       ++arg;
       task = TASK_DUMP;
-    } else if (! strcmp(argv[arg], "convert")) {
+    } else if (!strcmp(argv[arg], "convert")) {
       ++arg;
       task = TASK_CONVERT;
-    } else if (! strcmp(argv[arg], "encode")) {
+    } else if (!strcmp(argv[arg], "encode")) {
       ++arg;
       task = TASK_ENCODE;
     } else {
@@ -598,13 +551,26 @@ int main(int argc, char * argv[]) {
     return showusage();
   }
 
+  if (task == TASK_ADD) {
+    if ((arg != argc) && (strcmp(argv[arg], "-j") == 0)) {
+      jobs = atoi(argv[arg + 1]);
+
+      if ((jobs < 1) || (jobs > 128)) {
+        std::cerr << "Invalid argument for -j\n";
+        return showusage();
+      };
+
+      arg += 2;
+    }
+  }
+
   if (task == TASK_ADD || task == TASK_CONVERT || task == TASK_ENCODE) {
     if (arg == argc) {
       std::cerr << "add|convert|encode actions requires a -o option to be set\n";
       return showusage();
     }
-    if (! strcmp(argv[arg], "-o")) {
-      if (arg < argc-1) {
+    if (!strcmp(argv[arg], "-o")) {
+      if (arg < argc - 1) {
         output_file = argv[++arg];
       } else {
         std::cerr << " -o option requires a value\n";
@@ -617,7 +583,7 @@ int main(int argc, char * argv[]) {
       return showusage();
     }
     for (; arg < argc; ++arg) {
-      filenames.push_back(argv[arg]);
+      filenames.emplace_back(argv[arg]);
     }
   }
 
@@ -627,19 +593,18 @@ int main(int argc, char * argv[]) {
       return showusage();
     }
     for (; arg < argc; ++arg) {
-      filenames.push_back(argv[arg]);
+      filenames.emplace_back(argv[arg]);
     }
   }
 
   if (task == TASK_ADD)
-    ret = addFiles(output_file, filenames);
+    ret = addFiles(output_file, filenames, jobs);
   else if (task == TASK_DUMP)
     ret = dumpFiles(filenames);
   else if (task == TASK_CONVERT)
     ret = convertFile(output_file, filenames);
   else if (task == TASK_ENCODE)
     ret = encodeFile(output_file, filenames);
-
 
   google::protobuf::ShutdownProtobufLibrary();
   return ret;

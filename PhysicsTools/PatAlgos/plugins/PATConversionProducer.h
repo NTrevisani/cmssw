@@ -4,7 +4,7 @@
 #ifndef PhysicsTools_PatAlgos_PATConversionProducer_h
 #define PhysicsTools_PatAlgos_PATConversionProducer_h
 
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/global/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/InputTag.h"
@@ -30,29 +30,22 @@
 
 #include <string>
 
-
 namespace pat {
 
+  class PATConversionProducer : public edm::global::EDProducer<> {
+  public:
+    explicit PATConversionProducer(const edm::ParameterSet& iConfig);
+    ~PATConversionProducer() override;
 
-  class PATConversionProducer : public edm::EDProducer {
+    void produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const override;
 
-    public:
-
-      explicit PATConversionProducer(const edm::ParameterSet & iConfig);
-      ~PATConversionProducer();
-
-      virtual void produce(edm::Event & iEvent, const edm::EventSetup& iSetup) override;
-
-    private:
-
-      // configurables
-      edm::EDGetTokenT<edm::View<reco::GsfElectron> > electronToken_;
-      edm::EDGetTokenT<reco::BeamSpot>                bsToken_;
-      edm::EDGetTokenT<reco::ConversionCollection>    conversionsToken_;
-
+  private:
+    // configurables
+    const edm::EDGetTokenT<edm::View<reco::GsfElectron> > electronToken_;
+    const edm::EDGetTokenT<reco::BeamSpot> bsToken_;
+    const edm::EDGetTokenT<reco::ConversionCollection> conversionsToken_;
   };
 
-
-}
+}  // namespace pat
 
 #endif

@@ -27,6 +27,13 @@ namespace edm {
     Parentage();
 
     explicit Parentage(std::vector<BranchID> const& parents);
+    explicit Parentage(std::vector<BranchID>&& parents);
+
+    Parentage(Parentage const&) = default;
+    Parentage(Parentage&&) = default;
+
+    Parentage& operator=(Parentage const&) = default;
+    Parentage& operator=(Parentage&&) = default;
 
     ~Parentage() {}
 
@@ -34,11 +41,11 @@ namespace edm {
 
     void write(std::ostream& os) const;
 
-    std::vector<BranchID> const& parents() const {return parents_;}
-    std::vector<BranchID>& parentsForUpdate() {return parents_;}
-    void setParents(std::vector<BranchID> const& parents) {parents_ = parents;}
-    void swap(Parentage& other) {parents_.swap(other.parents_);}
-    void initializeTransients() {transient_.reset();}
+    std::vector<BranchID> const& parents() const { return parents_; }
+    std::vector<BranchID>& parentsForUpdate() { return parents_; }
+    void setParents(std::vector<BranchID> const& parents) { parents_ = parents; }
+    void swap(Parentage& other) { parents_.swap(other.parents_); }
+    void initializeTransients() { transient_.reset(); }
     struct Transients {
       Transients() {}
       void reset() {}
@@ -51,15 +58,9 @@ namespace edm {
   };
 
   // Free swap function
-  inline
-  void
-  swap(Parentage& a, Parentage& b) {
-    a.swap(b);
-  }
+  inline void swap(Parentage& a, Parentage& b) { a.swap(b); }
 
-  inline
-  std::ostream&
-  operator<<(std::ostream& os, Parentage const& p) {
+  inline std::ostream& operator<<(std::ostream& os, Parentage const& p) {
     p.write(os);
     return os;
   }
@@ -67,6 +68,5 @@ namespace edm {
   // Only the 'salient attributes' are testing in equality comparison.
   bool operator==(Parentage const& a, Parentage const& b);
   inline bool operator!=(Parentage const& a, Parentage const& b) { return !(a == b); }
-}
+}  // namespace edm
 #endif
-

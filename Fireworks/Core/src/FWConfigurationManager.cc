@@ -27,7 +27,7 @@
 #include "Fireworks/Core/src/SimpleSAXParser.h"
 #include "Fireworks/Core/interface/FWJobMetadataManager.h"
 #include "Fireworks/Core/interface/fwLog.h"
-
+#include "Fireworks/Core/interface/FWXMLConfigParser.h"
 
 //
 // constants, enums and typedefs
@@ -40,18 +40,14 @@
 //
 // constructors and destructor
 //
-FWConfigurationManager::FWConfigurationManager():m_ignore(false)
-{
-}
+FWConfigurationManager::FWConfigurationManager() : m_ignore(false) {}
 
 // FWConfigurationManager::FWConfigurationManager(const FWConfigurationManager& rhs)
 // {
 //    // do actual copying here;
 // }
 
-FWConfigurationManager::~FWConfigurationManager()
-{
-}
+FWConfigurationManager::~FWConfigurationManager() {}
 
 //
 // assignment operators
@@ -68,284 +64,85 @@ FWConfigurationManager::~FWConfigurationManager()
 //
 // member functions
 //
-void
-FWConfigurationManager::add(const std::string& iName, FWConfigurable* iConf)
-{
-   assert(0!=iConf);
-   m_configurables[iName]=iConf;
+void FWConfigurationManager::add(const std::string& iName, FWConfigurable* iConf) {
+  assert(nullptr != iConf);
+  m_configurables[iName] = iConf;
 }
 
 //
 // const member functions
 //
-void
-FWConfigurationManager::setFrom(const FWConfiguration& iConfig) const
-{
-   assert(0!=iConfig.keyValues());
-   for(FWConfiguration::KeyValues::const_iterator it = iConfig.keyValues()->begin(),
-                                                  itEnd = iConfig.keyValues()->end();
+void FWConfigurationManager::setFrom(const FWConfiguration& iConfig) const {
+  assert(nullptr != iConfig.keyValues());
+  for (FWConfiguration::KeyValues::const_iterator it = iConfig.keyValues()->begin(), itEnd = iConfig.keyValues()->end();
        it != itEnd;
        ++it) {
-      std::map<std::string,FWConfigurable*>::const_iterator itFound = m_configurables.find(it->first);
-      assert(itFound != m_configurables.end());
-      itFound->second->setFrom(it->second);
-   }
+    std::map<std::string, FWConfigurable*>::const_iterator itFound = m_configurables.find(it->first);
+    assert(itFound != m_configurables.end());
+    itFound->second->setFrom(it->second);
+  }
 }
 
-void
-FWConfigurationManager::to(FWConfiguration& oConfig) const
-{
-   FWConfiguration config;
-   for(std::map<std::string,FWConfigurable*>::const_iterator it = m_configurables.begin(),
-                                                             itEnd = m_configurables.end();
+void FWConfigurationManager::to(FWConfiguration& oConfig) const {
+  FWConfiguration config;
+  for (std::map<std::string, FWConfigurable*>::const_iterator it = m_configurables.begin(),
+                                                              itEnd = m_configurables.end();
        it != itEnd;
        ++it) {
-      it->second->addTo(config);
-      oConfig.addKeyValue(it->first, config, true);
-   }
+    it->second->addTo(config);
+    oConfig.addKeyValue(it->first, config, true);
+  }
 }
 
-
-void
-FWConfigurationManager::writeToFile(const std::string& iName) const
-{
-   try
-   {
-      std::ofstream file(iName.c_str());
-      if(not file) {
-         std::string message = "unable to open file " + iName;
-         message += iName;
-         throw std::runtime_error(message.c_str());
-      }
-      FWConfiguration top;
-      to(top);
-      fwLog(fwlog::kInfo) << "Writing to file "<< iName.c_str() << "...\n";
-      fflush(stdout);
-
-      streamTo(file, top, "top");
-   }
-   catch (std::runtime_error &e)
-   { 
-      fwLog(fwlog::kError) << "FWConfigurationManager::writeToFile() " << e.what() << std::endl;
-   }
-}
-
-void
-FWConfigurationManager::readFromOldFile(const std::string& iName) const
-{
-   Int_t error=0;
-   // Int_t value =
-   gROOT->LoadMacro( iName.c_str(), &error );
-   if(0 != error) {
-      std::string message("unable to load macro file ");
+void FWConfigurationManager::writeToFile(const std::string& iName) const {
+  try {
+    std::ofstream file(iName.c_str());
+    if (not file) {
+      std::string message = "unable to open file " + iName;
       message += iName;
       throw std::runtime_error(message.c_str());
-   }
+    }
+    FWConfiguration top;
+    to(top);
+    fwLog(fwlog::kInfo) << "Writing to file " << iName.c_str() << "...\n";
+    fflush(stdout);
 
-   const std::string command("(Long_t)(fwConfig() )");
-
-   error = 0;
-   Long_t lConfig = gROOT->ProcessLineFast(command.c_str(),
-                                           &error);
-
-   {
-      //need to unload this macro so that we can load a new configuration
-      // which uses the same function name in the macro
-      Int_t error = 0;
-      gROOT->ProcessLineSync((std::string(".U ")+iName).c_str(), &error);
-   }
-   if(0 != error) {
-      std::string message("unable to properly parse configuration file ");
-      message += iName;
-      throw std::runtime_error(message.c_str());
-   }
-   std::auto_ptr<FWConfiguration> config( reinterpret_cast<FWConfiguration*>(lConfig) );
-
-   setFrom( *config);
+    FWConfiguration::streamTo(file, top, "top");
+  } catch (std::runtime_error& e) {
+    fwLog(fwlog::kError) << "FWConfigurationManager::writeToFile() " << e.what() << std::endl;
+  }
 }
 
-void
-debug_config_state_machine(const char *where, const std::string &tag, int state)
-{
-#ifdef FW_CONFIG_PARSER_DEBUG
-  static char *debug_states[] = {
-     "IN_BEGIN_DOCUMENT",
-     "IN_PUSHED_CONFIG",
-     "IN_POPPED_CONFIG",
-     "IN_BEGIN_STRING",
-     "IN_STORED_STRING"
-   };
+void FWConfigurationManager::readFromOldFile(const std::string& iName) const {
+  Int_t error = 0;
+  // Int_t value =
+  gROOT->LoadMacro(iName.c_str(), &error);
+  if (0 != error) {
+    std::string message("unable to load macro file ");
+    message += iName;
+    throw std::runtime_error(message.c_str());
+  }
 
-  std::cerr << "  " << where << " tag/data " << tag << "in state " << debug_states[state] << std::endl;
-#endif
+  const std::string command("(Long_t)(fwConfig() )");
+
+  error = 0;
+  Long_t lConfig = gROOT->ProcessLineFast(command.c_str(), &error);
+
+  {
+    //need to unload this macro so that we can load a new configuration
+    // which uses the same function name in the macro
+    Int_t error = 0;
+    gROOT->ProcessLineSync((std::string(".U ") + iName).c_str(), &error);
+  }
+  if (0 != error) {
+    std::string message("unable to properly parse configuration file ");
+    message += iName;
+    throw std::runtime_error(message.c_str());
+  }
+  std::unique_ptr<FWConfiguration> config(reinterpret_cast<FWConfiguration*>(lConfig));
+
+  setFrom(*config);
 }
-
-/** Helper class which reads the XML configuration and constructs the
-   FWConfiguration classes.
-   
-   State machine for the parser can be found by cut and pasting the following 
-   in graphviz.
-   
-   digraph {
-    IN_BEGIN_DOCUMENT->IN_PUSHED_CONFIG [label = "beginElement(config)"]
-
-    IN_PUSHED_CONFIG->IN_PUSHED_CONFIG [label = "beginElement(config)"]
-    IN_PUSHED_CONFIG->IN_POPPED_CONFIG [label = "endElement(config)"]
-    IN_PUSHED_CONFIG->IN_BEGIN_STRING [label = "beginElement(string)"]
-
-    IN_POPPED_CONFIG->IN_PUSHED_CONFIG [label = "beginElement(config)"]
-    IN_POPPED_CONFIG->IN_POPPED_CONFIG [label = "endElement(config)"]
-    IN_POPPED_CONFIG->DONE [label = "top level config popped"]
-
-    IN_BEGIN_STRING->IN_STORED_STRING [label = "data()"];
-    IN_BEGIN_STRING->IN_PUSHED_CONFIG [label = "endElement(string)"]
-
-    IN_STORED_STRING->IN_PUSHED_CONFIG [label = "endElement(string)"]
-   }
- */
-class FWXMLConfigParser : public SimpleSAXParser
-{
-   enum STATES {
-        IN_BEGIN_DOCUMENT,
-        IN_PUSHED_CONFIG,
-        IN_POPPED_CONFIG,
-        IN_BEGIN_STRING,
-        IN_STORED_STRING
-      };
-
-public:
-   FWXMLConfigParser(std::istream &f) 
-   : SimpleSAXParser(f),
-     m_state(IN_BEGIN_DOCUMENT),
-     m_first(0)
-   {}
-
-   /** Pushes the configuration on stack eventually */
-   void pushConfig(Attributes &attributes)
-   {
-      std::string name;
-      int version = 0;
-      for (size_t i = 0, e = attributes.size(); i != e; ++i)
-      {
-         Attribute &attr = attributes[i];
-         if (attr.key == "name")
-            name = attr.value;
-         else if (attr.key == "version")
-         {
-           char *endptr;
-           version = strtol(attr.value.c_str(), &endptr, 10);
-           if (endptr == attr.value.c_str())
-             throw ParserError("Version must be an integer.");
-         }
-         else
-            throw ParserError("Unexpected attribute " + attr.key);
-      }
-      m_configs.push_back(std::make_pair(name, new FWConfiguration(version)));
-   }
-   
-   
-   /** Executes any transaction in the state machine which happens when the 
-       xml parser finds an new element.
-     */
-   virtual void startElement(const std::string &tag, Attributes &attributes) override
-   {
-      debug_config_state_machine("start", tag, m_state);
-      if (m_state == IN_BEGIN_DOCUMENT)
-      {
-         if (tag != "config")
-            throw ParserError("Expecting toplevel <config> tag");
-         pushConfig(attributes);
-         m_first.reset(m_configs.back().second);
-         m_state = IN_PUSHED_CONFIG;
-      }
-      else if (m_state == IN_PUSHED_CONFIG)
-      {
-         if (tag == "config")
-            pushConfig(attributes);
-         else if (tag == "string")
-            m_state = IN_BEGIN_STRING;
-         else
-            throw ParserError("Unexpected element " + tag);
-      }
-      else if (m_state == IN_POPPED_CONFIG)
-      {
-         if (tag != "config")
-            throw ParserError("Unexpected element " + tag);
-         pushConfig(attributes);
-         m_state = IN_PUSHED_CONFIG;
-      }
-      else
-         throw ParserError("Wrong opening tag found " + tag);
-   }
-
-   /** Executes any transaction in the state machine which happens when the 
-       xml parser closes an element.
-
-       Notice that we need to do addKeyValue on endElement (and carry around
-       the FWConfigutation name) because of the "copy by value"
-       policy of addKeyValue addition which would add empty
-       FWConfiguration objects if done on startElement.
-     */
-   virtual void endElement(const std::string &tag) override
-   {
-      debug_config_state_machine("end", tag, m_state);
-      if (m_state == IN_PUSHED_CONFIG || m_state == IN_POPPED_CONFIG)
-      {
-         if (tag != "config")
-            throw ParserError("Wrong closing tag found " + tag);
-         
-         FWConfiguration *current = m_configs.back().second;
-         std::string key = m_configs.back().first;
-         m_configs.pop_back();
-         if (!m_configs.empty())
-            m_configs.back().second->addKeyValue(key, *current);
-         m_state = IN_POPPED_CONFIG;
-      }
-      else if (m_state == IN_BEGIN_STRING && tag == "string")
-      {
-         m_configs.back().second->addValue("");
-         m_state = IN_PUSHED_CONFIG;
-      }       
-      else if (m_state == IN_STORED_STRING && tag == "string")
-         m_state = IN_PUSHED_CONFIG;
-      else
-         throw ParserError("Wrong closing tag found " + tag);
-   }
-
-   /** Executes any transaction in the state machine which happens when
-       the xml parser finds some data (i.e. text) between tags
-       This is mainly used to handle <string> element contents
-       but also whitespace between tags.
-     */
-   virtual void data(const std::string &data) override
-   {
-      debug_config_state_machine("data", data, m_state);
-      // We ignore whitespace but complain about any text which is not 
-      // in the <string> tag.
-      if (m_state == IN_BEGIN_STRING)
-      {
-         m_configs.back().second->addValue(data);
-         m_state = IN_STORED_STRING;
-      }
-      else if (strspn(data.c_str(), " \t\n") != data.size())
-         throw ParserError("Unexpected text " + data);
-   }
-   
-   /** The parsed configuration. Notice that the parser owns it and destroys
-       it when destroyed.
-     */
-   FWConfiguration *config(void)
-   {
-      return m_first.get();
-   }
-   
-private:
-   std::vector<std::pair<std::string, FWConfiguration *> > m_configs;
-   enum STATES                                             m_state;
-   std::auto_ptr<FWConfiguration>                          m_first;
-   //   unsigned int                                            m_currentConfigVersion;
-   std::string                                             m_currentConfigName;
-};
 
 /** Reads the configuration specified in @a iName and creates the internal 
     representation in terms of FWConfigutation objects.
@@ -353,85 +150,83 @@ private:
     Notice that if the file does not start with '<' the old CINT macro based
     system is used.
   */
-void
-FWConfigurationManager::readFromFile(const std::string& iName) const
-{
-   std::ifstream f(iName.c_str());
-   if (f.peek() != (int) '<')
-      return readFromOldFile(iName);
-   
-   // Check that the syntax is correct.
-   SimpleSAXParser syntaxTest(f);
-   syntaxTest.parse();
-   f.close();
-   
-   // Read again, this time actually parse.
-   std::ifstream g(iName.c_str());
-   // Actually parse the results.
-   FWXMLConfigParser parser(g);
-   parser.parse();
-   setFrom(*parser.config());
+void FWConfigurationManager::readFromFile(const std::string& iName) const {
+  std::ifstream f(iName.c_str());
+  if (f.peek() != (int)'<')
+    return readFromOldFile(iName);
+
+  // Check that the syntax is correct.
+  SimpleSAXParser syntaxTest(f);
+  syntaxTest.parse();
+  f.close();
+
+  // Read again, this time actually parse.
+  std::ifstream g(iName.c_str());
+  // Actually parse the results.
+  FWXMLConfigParser parser(g);
+  parser.parse();
+  setFrom(*parser.config());
 }
 
-void
-FWConfigurationManager::guessAndReadFromFile( FWJobMetadataManager* dataMng) const
-{
-    struct CMatch {
-        std::string file;
-        int cnt;
-        const FWConfiguration* cfg;
+std::string FWConfigurationManager::guessAndReadFromFile(FWJobMetadataManager* dataMng) const {
+  struct CMatch {
+    std::string file;
+    int cnt;
+    const FWConfiguration* cfg;
 
-        CMatch(std::string f):file(f), cnt(0), cfg(0) {}
-        bool operator < (const CMatch& x) const { return cnt < x.cnt; }
-    };
+    CMatch(std::string f) : file(f), cnt(0), cfg(nullptr) {}
+    bool operator<(const CMatch& x) const { return cnt < x.cnt; }
+  };
 
-    std::vector<CMatch> clist;
-    clist.push_back(CMatch("reco.fwc"));
-    clist.push_back(CMatch("miniaod.fwc"));
-    clist.push_back(CMatch("aod.fwc"));
-    std::vector<FWJobMetadataManager::Data> & sdata = dataMng->usableData();
+  std::vector<CMatch> clist;
+  clist.push_back(CMatch("reco.fwc"));
+  clist.push_back(CMatch("miniaod.fwc"));
+  clist.push_back(CMatch("aod.fwc"));
+  std::vector<FWJobMetadataManager::Data>& sdata = dataMng->usableData();
 
-    for (std::vector<CMatch>::iterator c = clist.begin(); c != clist.end(); ++c ) {
-        std::string iName = gSystem->Which(TROOT::GetMacroPath(), c->file.c_str(), kReadPermission);
-        std::ifstream f(iName.c_str());
-        if (f.peek() != (int) '<') {
-            fwLog(fwlog::kWarning) << "FWConfigurationManager::guessAndReadFromFile can't open "<<  iName << std::endl ;        
-            continue;
-        }
-   
-        // Read again, this time actually parse.
-        std::ifstream g(iName.c_str());
-        FWXMLConfigParser* parser = new FWXMLConfigParser(g);
-        parser->parse();
-
-        c->cfg = parser->config();
-        const FWConfiguration::KeyValues* keyValues = 0;
-        for(FWConfiguration::KeyValues::const_iterator it = c->cfg->keyValues()->begin(),
-                itEnd = c->cfg->keyValues()->end();  it != itEnd; ++it) {
-            if (it->first == "EventItems" )  {
-                keyValues = it->second.keyValues();
-                break;
-            }
-        }
-  
-        for (FWConfiguration::KeyValues::const_iterator it = keyValues->begin(); it != keyValues->end(); ++it)
-        {
-            const FWConfiguration& conf = it->second;
-            const FWConfiguration::KeyValues* keyValues =  conf.keyValues();
-            const std::string& type = (*keyValues)[0].second.value();
-            for(std::vector<FWJobMetadataManager::Data>::iterator di = sdata.begin(); di != sdata.end(); ++di)
-            {
-                if (di->type_ == type) {
-                    c->cnt++;
-                    break;
-                }
-            } 
-        }
-        // printf("%s file %d matches\n", iName.c_str(), c->cnt);
+  for (std::vector<CMatch>::iterator c = clist.begin(); c != clist.end(); ++c) {
+    std::string iName = gSystem->Which(TROOT::GetMacroPath(), c->file.c_str(), kReadPermission);
+    std::ifstream f(iName.c_str());
+    if (f.peek() != (int)'<') {
+      fwLog(fwlog::kWarning) << "FWConfigurationManager::guessAndReadFromFile can't open " << iName << std::endl;
+      continue;
     }
-    std::sort(clist.begin(), clist.end());
-    fwLog(fwlog::kInfo) << "Loading configuration file "  << clist.back().file << std::endl;
-    setFrom(*(clist.back().cfg));
+
+    // Read again, this time actually parse.
+    std::ifstream g(iName.c_str());
+    FWXMLConfigParser* parser = new FWXMLConfigParser(g);
+    parser->parse();
+
+    c->cfg = parser->config();
+    const FWConfiguration::KeyValues* keyValues = nullptr;
+    for (FWConfiguration::KeyValues::const_iterator it = c->cfg->keyValues()->begin(),
+                                                    itEnd = c->cfg->keyValues()->end();
+         it != itEnd;
+         ++it) {
+      if (it->first == "EventItems") {
+        keyValues = it->second.keyValues();
+        break;
+      }
+    }
+
+    for (FWConfiguration::KeyValues::const_iterator it = keyValues->begin(); it != keyValues->end(); ++it) {
+      const FWConfiguration& conf = it->second;
+      const FWConfiguration::KeyValues* keyValues = conf.keyValues();
+      const std::string& type = (*keyValues)[0].second.value();
+      for (std::vector<FWJobMetadataManager::Data>::iterator di = sdata.begin(); di != sdata.end(); ++di) {
+        if (di->type_ == type) {
+          c->cnt++;
+          break;
+        }
+      }
+    }
+    // printf("%s file %d matches\n", iName.c_str(), c->cnt);
+  }
+  std::sort(clist.begin(), clist.end());
+  fwLog(fwlog::kInfo) << "Loading configuration file " << clist.back().file << std::endl;
+  setFrom(*(clist.back().cfg));
+
+  return clist.back().file;
 }
 
 //

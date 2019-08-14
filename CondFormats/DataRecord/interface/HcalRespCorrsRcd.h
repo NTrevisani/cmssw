@@ -4,7 +4,7 @@
 //
 // Package:     DataRecord
 // Class  :     HcalRespCorrsRcd
-// 
+//
 /**\class HcalRespCorrsRcd HcalRespCorrsRcd.h CondFormats/DataRecord/interface/HcalRespCorrsRcd.h
 
  Description: <one line class summary>
@@ -14,14 +14,19 @@
 
 */
 //
-// Author:      
+// Author:
 // Created:     Sat Mar  1 15:49:28 CET 2008
-// $Id: HcalRespCorrsRcd.h,v 1.1 2008/03/03 16:57:14 rofierzy Exp $
 //
 
 #include "FWCore/Framework/interface/DependentRecordImplementation.h"
+#include "Geometry/Records/interface/HcalRecNumberingRecord.h"
 #include "Geometry/Records/interface/IdealGeometryRecord.h"
+#include "CondFormats/DataRecord/interface/HBHEDarkeningRecord.h"
+#include "CondFormats/DataRecord/interface/HcalTimeSlewRecord.h"
 
-class HcalRespCorrsRcd : public edm::eventsetup::DependentRecordImplementation<HcalRespCorrsRcd, boost::mpl::vector<IdealGeometryRecord> > {};
+class HcalRespCorrsRcd
+    : public edm::eventsetup::DependentRecordImplementation<
+          HcalRespCorrsRcd,
+          boost::mpl::vector<HcalRecNumberingRecord, IdealGeometryRecord, HBHEDarkeningRecord, HcalTimeSlewRecord> > {};
 
 #endif

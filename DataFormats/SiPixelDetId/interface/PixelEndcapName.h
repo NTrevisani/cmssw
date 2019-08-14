@@ -5,40 +5,41 @@
  * Endcap Module name (as in PixelDatabase) for endcaps
  */
 #include "DataFormats/SiPixelDetId/interface/PixelModuleName.h"
-#include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 #include "DataFormats/SiPixelDetId/interface/PXFDetId.h"
 
 #include <string>
 #include <iostream>
 
 class DetId;
+class TrackerTopology;
 
 class PixelEndcapName : public PixelModuleName {
 public:
-
-  enum HalfCylinder { mO = 1, mI = 2 , pO =3 , pI =4 };
+  enum HalfCylinder { mO = 1, mI = 2, pO = 3, pI = 4 };
 
   /// ctor from DetId
-  PixelEndcapName(const DetId &, bool phase=false);
-  PixelEndcapName(const DetId &, const TrackerTopology* tt, bool phase=false);
-  
+  PixelEndcapName(const DetId&, bool phase = false);
+  PixelEndcapName(const DetId&, const TrackerTopology* tt, bool phase = false);
+
   /// ctor for defined name
-  PixelEndcapName( HalfCylinder part = mO, int disk =0, int blade =0, int pannel=0, 
-		   int plaq=0, bool phase=false) 
-    : PixelModuleName(false), 
-      thePart(part), theDisk(disk), theBlade(blade), thePannel(pannel), 
-    thePlaquette(plaq), phase1(phase)
-  { }
+  PixelEndcapName(HalfCylinder part = mO, int disk = 0, int blade = 0, int pannel = 0, int plaq = 0, bool phase = false)
+      : PixelModuleName(false),
+        thePart(part),
+        theDisk(disk),
+        theBlade(blade),
+        thePannel(pannel),
+        thePlaquette(plaq),
+        phase1(phase) {}
 
   /// ctor from name string
-  PixelEndcapName(std::string name);
+  PixelEndcapName(std::string name, bool phase = false);
 
-  virtual ~PixelEndcapName() { }
+  ~PixelEndcapName() override {}
 
   /// from base class
-  virtual std::string name() const;
+  std::string name() const override;
 
-  HalfCylinder halfCylinder() const { return thePart; } 
+  HalfCylinder halfCylinder() const { return thePart; }
 
   /// disk id
   int diskName() const { return theDisk; }
@@ -46,25 +47,24 @@ public:
   /// blade id
   int bladeName() const { return theBlade; }
 
-  /// pannel id 
+  /// pannel id
   int pannelName() const { return thePannel; }
 
   /// plaquetteId (in pannel)
   int plaquetteName() const { return thePlaquette; }
 
   /// ring Id
-  int ringName() const { return thePannel; }
+  int ringName() const { return thePlaquette; }
 
   /// module Type
-   virtual PixelModuleName::ModuleType  moduleType() const;
+  PixelModuleName::ModuleType moduleType() const override;
 
   /// return DetId
-  PXFDetId getDetId(); 
-  DetId getDetId(const TrackerTopology* tt); 
+  PXFDetId getDetId();
+  DetId getDetId(const TrackerTopology* tt);
 
   /// check equality of modules from datamemebers
-  virtual bool operator== (const PixelModuleName &) const;
-
+  bool operator==(const PixelModuleName&) const override;
 
 private:
   HalfCylinder thePart;
@@ -72,5 +72,5 @@ private:
   bool phase1;
 };
 
-std::ostream & operator<<( std::ostream& out, const PixelEndcapName::HalfCylinder & t);
+std::ostream& operator<<(std::ostream& out, const PixelEndcapName::HalfCylinder& t);
 #endif

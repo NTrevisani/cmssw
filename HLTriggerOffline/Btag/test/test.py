@@ -1,4 +1,6 @@
+from __future__ import print_function
 import FWCore.ParameterSet.Config as cms
+from DQMServices.Core.DQMEDHarvester import DQMEDHarvester
 process = cms.Process("HLTBTAG")
 
 from PhysicsTools.PatAlgos.tools.coreTools import *	
@@ -17,19 +19,19 @@ fileini = fileINI("config.ini")
 fileini.read()
 
 #print read variables
-print
-print "Reading ", fileini.fileName
-print
-print "maxEvents = ",fileini.maxEvents
-print "CMSSWVER = ",fileini.CMSSWVER
-print "processname = ",fileini.processname
-print "jets (for matching) = ",fileini.jets
-print "files = ",fileini.files
-print "btag_modules ",fileini.btag_modules
-print "btag_pathes ",fileini.btag_pathes
-print "vertex_modules ",fileini.vertex_modules
-print "vertex_pathes ",fileini.vertex_pathes
-print
+print()
+print("Reading ", fileini.fileName)
+print()
+print("maxEvents = ",fileini.maxEvents)
+print("CMSSWVER = ",fileini.CMSSWVER)
+print("processname = ",fileini.processname)
+print("jets (for matching) = ",fileini.jets)
+print("files = ",fileini.files)
+print("btag_modules ",fileini.btag_modules)
+print("btag_pathes ",fileini.btag_pathes)
+print("vertex_modules ",fileini.vertex_modules)
+print("vertex_pathes ",fileini.vertex_pathes)
+print()
 
 triggerFilter = []
 triggerFilter.extend(fileini.vertex_pathes)
@@ -43,17 +45,15 @@ for i in range(len(triggerFilter)):
 	
 	triggerString +=  triggerFilter[i] + "*"
 
-print "triggerString : ",triggerString
+print("triggerString : ",triggerString)
 
 #denominator trigger
 process.hltBtagTriggerSelection = cms.EDFilter( "TriggerResultsFilter",
     triggerConditions = cms.vstring(
       triggerString),
     hltResults = cms.InputTag( "TriggerResults", "", fileini.processname ),
-#    l1tResults = cms.InputTag( "gtDigis" ),
-#    l1tIgnoreMask = cms.bool( False ),
-#    l1techIgnorePrescales = cms.bool( False ),
-#    daqPartitions = cms.uint32( 1 ),
+    l1tResults = cms.InputTag( "" ),
+    l1tIgnoreMaskAndPrescale = cms.bool( False ),
     throw = cms.bool( True )
 )
 
@@ -61,14 +61,16 @@ process.hltBtagTriggerSelection = cms.EDFilter( "TriggerResultsFilter",
 process.hltBtagJetsbyRef.jets = cms.InputTag(fileini.jets)
 
 #define VertexValidationVertices for the vertex DQM validation
-process.VertexValidationVertices= cms.EDAnalyzer("HLTVertexPerformanceAnalyzer",
+from DQMServices.Core.DQMEDAnalyzer import DQMEDAnalyzer
+process.VertexValidationVertices= DQMEDAnalyzer('HLTVertexPerformanceAnalyzer',
+	SimVertexCollection = cms.InputTag("g4SimHits"),
 	TriggerResults = cms.InputTag('TriggerResults','',fileini.processname),
 	HLTPathNames = cms.vstring(fileini.vertex_pathes),
 	Vertex = fileini.vertex_modules,
 )
 
 #define bTagValidation for the b-tag DQM validation (distribution plot)
-process.bTagValidation = cms.EDAnalyzer("HLTBTagPerformanceAnalyzer",
+process.bTagValidation = DQMEDAnalyzer('HLTBTagPerformanceAnalyzer',
 	TriggerResults = cms.InputTag('TriggerResults','',fileini.processname),
 	HLTPathNames = cms.vstring(fileini.btag_pathes),
 	JetTag = fileini.btag_modules,
@@ -84,7 +86,7 @@ process.bTagValidation = cms.EDAnalyzer("HLTBTagPerformanceAnalyzer",
 )
 
 #define bTagPostValidation for the b-tag DQM validation (efficiency and mistagrate plot)
-process.bTagPostValidation = cms.EDAnalyzer("HLTBTagHarvestingAnalyzer",
+process.bTagPostValidation = DQMEDHarvester("HLTBTagHarvestingAnalyzer",
 	HLTPathNames = fileini.btag_pathes,
 	histoName	= fileini.btag_modules_string,
 	minTag	= cms.double(0.6),
@@ -99,7 +101,7 @@ process.bTagPostValidation = cms.EDAnalyzer("HLTBTagHarvestingAnalyzer",
 )
 #read input file
 process.source = cms.Source("PoolSource",
-	fileNames = cms.untracked.vstring("root://xrootd.ba.infn.it///store/relval/CMSSW_7_2_0_pre8/RelValTTbar_13/GEN-SIM-DIGI-RAW-HLTDEBUG/PRE_LS172_V15-v1/00000/8A425442-2A50-E411-A51B-0025905A60B2.root")
+	fileNames = cms.untracked.vstring(fileini.files)
 )
 
 #put all in a path

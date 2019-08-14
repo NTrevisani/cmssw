@@ -14,7 +14,7 @@ import FWCore.ParameterSet.Config as cms
 # which HepMCProduct (gen.info) to pickup as event input, 
 # the original or the one with the vertex smearing applied; 
 # the parameter's name is HepMCProductLabel, it belongs to
-# the PSet Generator, and the default = "VtxSmeared"
+# the PSet Generator, and the default = "generatorSmeared"
 #
 from Configuration.StandardSequences.Sim_cff import *
 #
@@ -35,6 +35,7 @@ from Configuration.StandardSequences.Sim_cff import *
 #
 from Configuration.StandardSequences.Digi_cff import *
 from SimGeneral.HepPDTESSource.pythiapdt_cfi import *
-simulation = cms.Sequence(psim*pdigi)
+simulationTask = cms.Task(psimTask)
+simulation = cms.Sequence(pdigi, simulationTask)
 
 

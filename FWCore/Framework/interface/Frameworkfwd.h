@@ -18,12 +18,15 @@ namespace edm {
   class EDLooper;
   class EDProducer;
   class Event;
+  class EventForOutput;
   class EventPrincipal;
   class EventSetup;
+  class EventSetupImpl;
   class FileBlock;
   class InputSource;
   struct InputSourceDescription;
   class LuminosityBlock;
+  class LuminosityBlockForOutput;
   class LuminosityBlockPrincipal;
   class OutputModule;
   struct OutputModuleDescription;
@@ -34,17 +37,19 @@ namespace edm {
   class ProcessNameSelector;
   class ProductRegistryHelper;
   class Run;
+  class RunForOutput;
   class RunPrincipal;
   class Schedule;
   class TypeID;
-  class UnscheduledHandler;
   class ViewBase;
 
   struct EventSummary;
   struct PathSummary;
   struct TriggerReport;
-  template <typename T> class View;
-  template <typename T> class WorkerT;
-}
+  template <typename T>
+  class View;
+  template <typename T>
+  class WorkerT;
+}  // namespace edm
 
 #endif

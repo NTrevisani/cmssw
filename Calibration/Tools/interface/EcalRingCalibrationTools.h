@@ -11,43 +11,46 @@
  ***************************************/
 
 #include <vector>
+#include <mutex>
+#include <atomic>
 #include "DataFormats/EcalDetId/interface/EBDetId.h"
 #include "DataFormats/EcalDetId/interface/EEDetId.h"
+#include "FWCore/Utilities/interface/thread_safety_macros.h"
 
 class DetId;
 class CaloGeometry;
 
-class EcalRingCalibrationTools 
-{
- public:
-  EcalRingCalibrationTools() {};
-  ~EcalRingCalibrationTools() {};
-  
-  /// Retrieve the phi-ring index corresponding to a DetId 
-  static short getRingIndex(DetId aDetId); 
+class EcalRingCalibrationTools {
+public:
+  EcalRingCalibrationTools(){};
+  ~EcalRingCalibrationTools(){};
 
-  static short getModuleIndex(DetId aDetId); 
-  
-  /// Retrieve the DetIds in a phi-ring 
+  /// Retrieve the phi-ring index corresponding to a DetId
+  static short getRingIndex(DetId aDetId);
+
+  static short getModuleIndex(DetId aDetId);
+
+  /// Retrieve the DetIds in a phi-ring
   static std::vector<DetId> getDetIdsInRing(short aRingIndex);
-  static std::vector<DetId> getDetIdsInModule(short int);  
-  static std::vector<DetId> getDetIdsInECAL();  
+  static std::vector<DetId> getDetIdsInModule(short int);
+  static std::vector<DetId> getDetIdsInECAL();
 
-  static const short N_RING_TOTAL = 248;
-  static const short N_RING_BARREL = 170 ;
-  static const short N_RING_ENDCAP = 78;
+  static constexpr short N_RING_TOTAL = 248;
+  static constexpr short N_RING_BARREL = 170;
+  static constexpr short N_RING_ENDCAP = 78;
 
-  static const short N_MODULES_BARREL = 144;
+  static constexpr short N_MODULES_BARREL = 144;
 
-  static void setCaloGeometry(const CaloGeometry* geometry) { caloGeometry_ = geometry; };
+  static void setCaloGeometry(const CaloGeometry* geometry);
 
- private:
+private:
+  static void initializeFromGeometry(CaloGeometry const* geometry);  // needed only for the endcap
 
-  static void initializeFromGeometry(); //needed only for the endcap
-  
-  static bool isInitializedFromGeometry_;
-  static short endcapRingIndex_[EEDetId::IX_MAX][EEDetId::IY_MAX]; //array needed only for the endcaps 
-  static const CaloGeometry* caloGeometry_;
+  static std::atomic<bool> isInitializedFromGeometry_;
 
+  CMS_THREAD_GUARD(isInitializedFromGeometry_)
+  static short endcapRingIndex_[EEDetId::IX_MAX][EEDetId::IY_MAX];  // array needed only for the endcaps
+
+  static std::once_flag once_;
 };
 #endif

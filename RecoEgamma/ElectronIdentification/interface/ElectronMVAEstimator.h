@@ -1,53 +1,28 @@
-#ifndef ElectronMVA_H
-#define ElectronMVA_H
+#ifndef __RecoEgamma_ElectronIdentification_ElectronMVAEstimator_H__
+#define __RecoEgamma_ElectronIdentification_ElectronMVAEstimator_H__
 
 #include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
-#include "TMVA/Reader.h"
-#include<string>
+#include "CondFormats/EgammaObjects/interface/GBRForest.h"
+
+#include <memory>
+#include <string>
 
 class ElectronMVAEstimator {
- public:
-  struct Configuration{
-         std::vector<std::string> vweightsfiles;
-   };
+public:
+  struct Configuration {
+    std::vector<std::string> vweightsfiles;
+  };
   ElectronMVAEstimator();
-  ElectronMVAEstimator(std::string fileName);
-  ElectronMVAEstimator(const Configuration & );
-  ~ElectronMVAEstimator() {;}
-  double mva(const reco::GsfElectron& myElectron, int nvertices=0);
+  ElectronMVAEstimator(const std::string& fileName);
+  ElectronMVAEstimator(const Configuration&);
+  ~ElectronMVAEstimator() { ; }
+  double mva(const reco::GsfElectron& myElectron, int nvertices = 0) const;
 
- private:
+private:
   const Configuration cfg_;
-  void bindVariables();
-  void init(std::string fileName);
+  void bindVariables(float vars[18]) const;
 
- private:
-  TMVA::Reader    *tmvaReader_;
-  
-  Float_t       fbrem;
-  Float_t       detain;
-  Float_t       dphiin; 
-  Float_t       sieie;
-  Float_t       hoe;
-  Float_t       eop;
-  Float_t       e1x5e5x5;
-  Float_t       eleopout;
-  Float_t       detaeleout;
-  Float_t       kfchi2;
-  Float_t       dist;
-  Float_t       dcot;
-  Float_t       eta;
-  Float_t       pt;
-  Int_t         kfhits;
-  Int_t         mishits;
-  Int_t         ecalseed;
-  Int_t         Nvtx;
-
-  Float_t       absdist;
-  Float_t       absdcot;
-  Float_t       mykfhits;
-  Float_t       mymishits;
-  Float_t       myNvtx;
+  std::vector<std::unique_ptr<const GBRForest> > gbr_;
 };
 
 #endif

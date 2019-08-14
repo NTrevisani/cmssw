@@ -14,6 +14,12 @@
  * Chang Liu:
  * The class prints nextLayers and compatibleLayers
  * Add new constructor for MuonTkNavigationSchool
+ *
+ * Cesare Calabria:
+ * GEMs implementation.
+
+ * David Nash:
+ * ME0s implementation
  */
 
 class DetLayer;
@@ -25,20 +31,23 @@ class MuonNavigationSchool;
 #include <string>
 
 class MuonNavigationPrinter {
-  public:
-  MuonNavigationPrinter(const MuonDetLayerGeometry *, MuonNavigationSchool const &, bool enableRPC = true );
-  MuonNavigationPrinter(const MuonDetLayerGeometry *,MuonNavigationSchool const &, const GeometricSearchTracker *);
+public:
+  MuonNavigationPrinter(const MuonDetLayerGeometry *,
+                        MuonNavigationSchool const &,
+                        bool enableRPC = true,
+                        bool enableCSC = true,
+                        bool enableGEM = false,
+                        bool enableME0 = false);
+  MuonNavigationPrinter(const MuonDetLayerGeometry *, MuonNavigationSchool const &, const GeometricSearchTracker *);
 
-  private:
-    void printLayer(const DetLayer*) const;
-    void printLayers(const std::vector<const DetLayer*>&) const;
-    /// return detector part (barrel, forward, backward)
-//    std::string layerPart(const DetLayer*) const;
-    /// return detector module (pixel, silicon, msgc, dt, csc, rpc)
-//    std::string layerModule(const DetLayer*) const;
+private:
+  void printLayer(const DetLayer *) const;
+  void printLayers(const std::vector<const DetLayer *> &) const;
+  /// return detector part (barrel, forward, backward)
+  //    std::string layerPart(const DetLayer*) const;
+  /// return detector module (pixel, silicon, msgc, dt, csc, rpc)
+  //    std::string layerModule(const DetLayer*) const;
 
-
-  MuonNavigationSchool const * school=nullptr;
-
+  MuonNavigationSchool const *school = nullptr;
 };
 #endif

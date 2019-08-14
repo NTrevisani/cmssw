@@ -10,10 +10,12 @@ from SimTracker.TrackAssociatorProducers.trackAssociatorByHits_cfi import *
 trackHistory = cms.PSet(
     bestMatchByMaxValue = cms.untracked.bool(True),
     trackingTruth = cms.untracked.InputTag("mix","MergedTrackTruth"),
-    trackAssociator = cms.untracked.InputTag('trackAssociatorByHits'),
+    trackAssociator = cms.untracked.InputTag('quickTrackAssociatorByHits'),
     trackProducer = cms.untracked.InputTag("generalTracks"),
     enableRecoToSim = cms.untracked.bool(True),
     enableSimToReco = cms.untracked.bool(False)
 )
 
 
+from Configuration.ProcessModifiers.premix_stage2_cff import premix_stage2
+premix_stage2.toModify(trackHistory, trackingTruth = "mixData:MergedTrackTruth")

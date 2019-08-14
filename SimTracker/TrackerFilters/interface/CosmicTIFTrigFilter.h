@@ -2,32 +2,31 @@
 #ifndef COSMICTIFTRIGFILTER_H
 #define COSMICTIFTRIGFILTER_H
 
-
-#include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
-#include "FWCore/Framework/interface/EDFilter.h"
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
-//#include "CLHEP/Vector/ThreeVector.h"
+#include "FWCore/Framework/interface/stream/EDFilter.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/Utilities/interface/EDGetToken.h"
+#include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
 
-namespace cms{
+namespace cms {
 
-class CosmicTIFTrigFilter : public edm::EDFilter {
+  class CosmicTIFTrigFilter : public edm::stream::EDFilter<> {
   public:
-  CosmicTIFTrigFilter(const edm::ParameterSet& conf);
-  virtual ~CosmicTIFTrigFilter() {}
-  bool filter(edm::Event & iEvent, edm::EventSetup const& c);
-  bool Sci_trig(const HepMC::FourVector&, const  HepMC::FourVector&,const  HepMC::FourVector&);
-  //  bool Sci_trig(CLHEP::Hep3Vector,  CLHEP::Hep3Vector, CLHEP::Hep3Vector);
+    CosmicTIFTrigFilter(const edm::ParameterSet &conf);
+    ~CosmicTIFTrigFilter() override {}
+    bool filter(edm::Event &iEvent, edm::EventSetup const &c) override;
+    bool Sci_trig(const HepMC::FourVector &, const HepMC::FourVector &, const HepMC::FourVector &);
 
- private:
-  edm::ParameterSet conf_;
+  private:
+    edm::ParameterSet conf_;
 
-  bool inTK;
-  int trigconf;
-  int tottrig;
-  int trig1, trig2, trig3;
-  std::vector<double> trigS1, trigS2, trigS3, trigS4;
+    bool inTK;
+    int trigconf;
+    int tottrig;
+    int trig1, trig2, trig3;
+    std::vector<double> trigS1, trigS2, trigS3, trigS4;
+    edm::EDGetTokenT<edm::HepMCProduct> m_Token;
   };
-}
-#endif 
+}  // namespace cms
+#endif

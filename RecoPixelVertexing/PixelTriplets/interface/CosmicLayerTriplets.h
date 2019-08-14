@@ -4,10 +4,10 @@
 /** \class CosmicLayerTriplets
  * find all (resonable) pairs of pixel layers
  */
-#include "Geometry/TrackerGeometryBuilder/interface/TrackerLayerIdAccessor.h"
 #include "DataFormats/TrackerRecHit2D/interface/SiStripRecHit2DCollection.h"
 #include "DataFormats/Common/interface/RangeMap.h"
 #include "FWCore/Framework/interface/EventSetup.h"
+#include "FWCore/Framework/interface/ESWatcher.h"
 #include "TrackingTools/DetLayers/interface/BarrelDetLayer.h"
 #include "TrackingTools/DetLayers/interface/ForwardDetLayer.h"
 #include "RecoTracker/TkHitPairs/interface/LayerWithHits.h"
@@ -18,51 +18,43 @@
 #include "DataFormats/TrackerRecHit2D/interface/SiStripMatchedRecHit2DCollection.h"
 #include "DataFormats/TrackerRecHit2D/interface/SiPixelRecHitCollection.h"
 
+#include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
 #include <vector>
 class CosmicLayerTriplets {
 public:
-  CosmicLayerTriplets():isFirstCall(true){};
+  CosmicLayerTriplets(){};
   ~CosmicLayerTriplets();
   //  explicit PixelSeedLayerPairs(const edm::EventSetup& iSetup);
- typedef std::pair<SeedLayerPairs::LayerPair, std::vector<const LayerWithHits*> > LayerPairAndLayers;
-
+  typedef std::pair<SeedLayerPairs::LayerPair, std::vector<const LayerWithHits *> > LayerPairAndLayers;
 
   //  virtual std::vector<LayerPair> operator()() const;
   //  std::vector<LayerTriplet> operator()() ;
   std::vector<LayerPairAndLayers> layers();
 
 private:
+  //definition of the map
 
-  //definition of the map 
- 
-
-  TrackerLayerIdAccessor acc;
-  
   LayerWithHits *lh1;
   LayerWithHits *lh2;
   LayerWithHits *lh3;
   LayerWithHits *lh4;
 
-   std::vector<BarrelDetLayer const*> bl;
-   std::vector<ForwardDetLayer const*> fpos;
-   std::vector<ForwardDetLayer const*> fneg;
-   //MP
-   std::vector<LayerWithHits*> allLayersWithHits;
-   bool isFirstCall;
- public:
- 
-   void init(const SiStripRecHit2DCollection &collstereo,
-	     const SiStripRecHit2DCollection &collrphi,
-	     const SiStripMatchedRecHit2DCollection &collmatched,
-	     std::string geometry,
-	     const edm::EventSetup& iSetup);
+  edm::ESWatcher<TrackerRecoGeometryRecord> watchTrackerGeometry_;
 
- private:
- std::string _geometry;
+  std::vector<BarrelDetLayer const *> bl;
+  //MP
+  std::vector<LayerWithHits *> allLayersWithHits;
+
+public:
+  void init(const SiStripRecHit2DCollection &collstereo,
+            const SiStripRecHit2DCollection &collrphi,
+            const SiStripMatchedRecHit2DCollection &collmatched,
+            std::string geometry,
+            const edm::EventSetup &iSetup);
+
+private:
+  std::string _geometry;
 };
-
-
-
 
 #endif

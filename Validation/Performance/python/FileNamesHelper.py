@@ -1,6 +1,8 @@
 #!/usr/bin/env python
+from __future__ import print_function
+from __future__ import absolute_import
 import re, os
-import parsingRulesHelper
+from . import parsingRulesHelper
 
 """ a lambda fucntion which checks only two first parts of tuple: candle and step of the JobID"""
 f_candle_and_step_inJobID = lambda candle, step, x: x[0] == candle and x[1] == step
@@ -115,7 +117,7 @@ def getJobID_fromFileName(logfile_name, suffix, givenPath =""):
 	if givenPath:
 		path = givenPath
 	
-	if not universal_candle_step_regs.has_key(suffix):
+	if suffix not in universal_candle_step_regs:
 		#create and cache a regexp
 		universal_candle_step_regs[suffix] = re.compile( \
 			r"""
@@ -156,7 +158,7 @@ def getJobID_fromFileName(logfile_name, suffix, givenPath =""):
 				is_pileup = conf["pileup_type"]
 				conditions = conf["conditions"]
 				event_content = conf["event_content"]
-		except OSError, e:
+		except OSError as e:
 			pass
 
 		return (candle, step, is_pileup, conditions, event_content)
@@ -277,8 +279,8 @@ def getRootFileSize(path, candle, step):
 	try:
 		size = [os.stat(f).st_size for f in root_files
 			 if f_candle_and_step_inJobID(candle, step, getJobID_fromRootFileName(f))][0]
-	except Exception, e:
-		print e
+	except Exception as e:
+		print(e)
 		return 0
 	return size
 
@@ -304,7 +306,7 @@ if __name__ == "__main__":
 	import doctest
 	doctest.testmod()
 	path = path = "/home/vidma/Desktop/CERN_code/cmssw/data/CMSSW_3_2_0_--usersteps=GEN-SIM,DIGI_lxbuild106.cern.ch_relval/relval/CMSSW_3_2_0/workGENSIMDIGI/TTbar_PU_TimeSize"
-	print "Job ID: " + str(getJobID_fromTimeReportLogName(os.path.join(path, "TTBAR__DIGI_PILEUP_TimingReport.log")))
+	print("Job ID: " + str(getJobID_fromTimeReportLogName(os.path.join(path, "TTBAR__DIGI_PILEUP_TimingReport.log"))))
 
 	#read_ConfigurationFromSimulationCandles(, step = "DIGI", is_pileup= "PILEUP")
 

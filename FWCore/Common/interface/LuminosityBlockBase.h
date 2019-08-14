@@ -21,8 +21,6 @@
 //         Created:  Tue Jan 12 15:31:00 CDT 2010
 //
 
-#if !defined(__CINT__) && !defined(__MAKECINT__)
-
 #include "DataFormats/Common/interface/BasicHandle.h"
 #include "DataFormats/Common/interface/ConvertHandle.h"
 #include "DataFormats/Common/interface/Handle.h"
@@ -39,51 +37,37 @@ namespace edm {
     virtual ~LuminosityBlockBase();
 
     // AUX functions.
-    LuminosityBlockNumber_t luminosityBlock() const {
-      return luminosityBlockAuxiliary().luminosityBlock();
-    }
+    LuminosityBlockNumber_t luminosityBlock() const { return luminosityBlockAuxiliary().luminosityBlock(); }
 
-    RunNumber_t run() const {
-      return luminosityBlockAuxiliary().run();
-    }
+    RunNumber_t run() const { return luminosityBlockAuxiliary().run(); }
 
-    LuminosityBlockID id() const {
-      return luminosityBlockAuxiliary().id();
-    }
+    LuminosityBlockID id() const { return luminosityBlockAuxiliary().id(); }
 
-    Timestamp const& beginTime() const {
-      return luminosityBlockAuxiliary().beginTime();
-    }
-    Timestamp const& endTime() const {
-      return luminosityBlockAuxiliary().endTime();
-    }
+    Timestamp const& beginTime() const { return luminosityBlockAuxiliary().beginTime(); }
+    Timestamp const& endTime() const { return luminosityBlockAuxiliary().endTime(); }
 
     virtual edm::LuminosityBlockAuxiliary const& luminosityBlockAuxiliary() const = 0;
 
     /// same as above, but using the InputTag class
-    template<typename PROD>
-    bool
-    getByLabel(InputTag const& tag, Handle<PROD>& result) const;
+    template <typename PROD>
+    bool getByLabel(InputTag const& tag, Handle<PROD>& result) const;
 
   private:
-    virtual BasicHandle getByLabelImpl(std::type_info const& iWrapperType, std::type_info const& iProductType, const InputTag& iTag) const = 0;
-
+    virtual BasicHandle getByLabelImpl(std::type_info const& iWrapperType,
+                                       std::type_info const& iProductType,
+                                       const InputTag& iTag) const = 0;
   };
 
-#if !defined(__REFLEX__)
-   template<class T>
-   bool
-   LuminosityBlockBase::getByLabel(const InputTag& tag, Handle<T>& result) const {
-      result.clear();
-      BasicHandle bh = this->getByLabelImpl(typeid(Wrapper<T>), typeid(T), tag);
-      convert_handle(std::move(bh), result);  // throws on conversion error
-      if (result.failedToGet()) {
-         return false;
-      }
-      return true;
-   }
-#endif
+  template <class T>
+  bool LuminosityBlockBase::getByLabel(const InputTag& tag, Handle<T>& result) const {
+    result.clear();
+    BasicHandle bh = this->getByLabelImpl(typeid(Wrapper<T>), typeid(T), tag);
+    result = convert_handle<T>(std::move(bh));
+    if (result.failedToGet()) {
+      return false;
+    }
+    return true;
+  }
 
-}
-#endif /*!defined(__CINT__) && !defined(__MAKECINT__)*/
+}  // namespace edm
 #endif

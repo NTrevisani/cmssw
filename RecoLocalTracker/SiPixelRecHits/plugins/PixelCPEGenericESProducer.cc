@@ -1,107 +1,101 @@
-#include "RecoLocalTracker/SiPixelRecHits/interface/PixelCPEGenericESProducer.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/PixelCPEGeneric.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
+#include "Geometry/Records/interface/TrackerTopologyRcd.h"
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
+#include "RecoLocalTracker/Records/interface/TkPixelCPERecord.h"
+#include "RecoLocalTracker/ClusterParameterEstimator/interface/PixelClusterParameterEstimator.h"
 
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/ModuleFactory.h"
 #include "FWCore/Framework/interface/ESProducer.h"
 
-// new record 
+// new record
 #include "CondFormats/DataRecord/interface/SiPixelGenErrorDBObjectRcd.h"
-
 
 #include <string>
 #include <memory>
 
-#define NEW_CPEERROR // must be constistent with base.cc, generic cc/h and genericProducer.cc 
+class PixelCPEGenericESProducer : public edm::ESProducer {
+public:
+  PixelCPEGenericESProducer(const edm::ParameterSet& p);
+  std::unique_ptr<PixelClusterParameterEstimator> produce(const TkPixelCPERecord&);
+
+private:
+  edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> magfieldToken_;
+  edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> pDDToken_;
+  edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> hTTToken_;
+  edm::ESGetToken<SiPixelLorentzAngle, SiPixelLorentzAngleRcd> lorentzAngleToken_;
+  edm::ESGetToken<SiPixelLorentzAngle, SiPixelLorentzAngleRcd> lorentzAngleWidthToken_;
+  edm::ESGetToken<SiPixelGenErrorDBObject, SiPixelGenErrorDBObjectRcd> genErrorDBObjectToken_;
+
+  edm::ParameterSet pset_;
+  bool useLAWidthFromDB_;
+  bool UseErrorsFromTemplates_;
+};
 
 using namespace edm;
 
-PixelCPEGenericESProducer::PixelCPEGenericESProducer(const edm::ParameterSet & p) 
-{
+PixelCPEGenericESProducer::PixelCPEGenericESProducer(const edm::ParameterSet& p) {
   std::string myname = p.getParameter<std::string>("ComponentName");
   // Use LA-width from DB. If both (upper and this) are false LA-width is calcuated from LA-offset
-  useLAWidthFromDB_ = p.existsAs<bool>("useLAWidthFromDB")?
-    p.getParameter<bool>("useLAWidthFromDB"):false;
-  // Use Alignment LA-offset 
-  useLAAlignmentOffsets_ = p.existsAs<bool>("useLAAlignmentOffsets")?
-    p.getParameter<bool>("useLAAlignmentOffsets"):false;
-  magname_ = p.existsAs<edm::ESInputTag>("MagneticFieldRecord")?
-    p.getParameter<edm::ESInputTag>("MagneticFieldRecord"):edm::ESInputTag("");
-
-  pset_ = p;
-  setWhatProduced(this,myname);
-
-  //std::cout<<" ESProducer "<<myname<<" "<<useLAWidthFromDB_<<" "<<useLAAlignmentOffsets_<<std::endl; //dk
-
-}
-
-PixelCPEGenericESProducer::~PixelCPEGenericESProducer() {}
-
-boost::shared_ptr<PixelClusterParameterEstimator>
-PixelCPEGenericESProducer::produce(const TkPixelCPERecord & iRecord){ 
-
-  ESHandle<MagneticField> magfield;
-  iRecord.getRecord<IdealMagneticFieldRecord>().get( magname_, magfield );
-
-  edm::ESHandle<TrackerGeometry> pDD;
-  iRecord.getRecord<TrackerDigiGeometryRecord>().get( pDD );
-
-  edm::ESHandle<TrackerTopology> hTT;
-  iRecord.getRecord<TrackerDigiGeometryRecord>().getRecord<IdealGeometryRecord>().get(hTT);
-
-  // Lorant angle for offsets
-  ESHandle<SiPixelLorentzAngle> lorentzAngle;
-  if(useLAAlignmentOffsets_) // LA offsets from alignment 
-    iRecord.getRecord<SiPixelLorentzAngleRcd>().get("fromAlignment",lorentzAngle );
-  else // standard LA, from calibration, label=""
-    iRecord.getRecord<SiPixelLorentzAngleRcd>().get(lorentzAngle );
-
-  // add the new la width object
-  ESHandle<SiPixelLorentzAngle> lorentzAngleWidth;
-  const SiPixelLorentzAngle * lorentzAngleWidthProduct = 0;
-  if(useLAWidthFromDB_) { // use the width LA
-    iRecord.getRecord<SiPixelLorentzAngleRcd>().get("forWidth",lorentzAngleWidth );
-    lorentzAngleWidthProduct = lorentzAngleWidth.product();
-  } else { lorentzAngleWidthProduct = NULL;} // do not use it
-  //std::cout<<" la width "<<lorentzAngleWidthProduct<<std::endl; //dk
-
-  const SiPixelGenErrorDBObject * genErrorDBObjectProduct = 0;
-
-#ifdef NEW_CPEERROR
-  // Errors take only from new GenError
-  ESHandle<SiPixelGenErrorDBObject> genErrorDBObject;
-  iRecord.getRecord<SiPixelGenErrorDBObjectRcd>().get(genErrorDBObject); //needs new TKPixelCPERecord.h
-  genErrorDBObjectProduct = genErrorDBObject.product();
-
-  cpe_  = boost::shared_ptr<PixelClusterParameterEstimator>(new PixelCPEGeneric(
-										pset_,magfield.product(),*pDD.product(),*hTT.product(),lorentzAngle.product(),genErrorDBObjectProduct,
-										lorentzAngleWidthProduct) );
-
-#else
-  // Errors can be used from tempaltes or from GenError, for testing only
-  const bool useNewSimplerErrors = false;
-  if(useNewSimplerErrors) { // new genError object
-    ESHandle<SiPixelGenErrorDBObject> genErrorDBObject;
-    iRecord.getRecord<SiPixelGenErrorDBObjectRcd>().get(genErrorDBObject); //needs new TKPixelCPERecord.h
-    genErrorDBObjectProduct = genErrorDBObject.product();
+  useLAWidthFromDB_ = p.existsAs<bool>("useLAWidthFromDB") ? p.getParameter<bool>("useLAWidthFromDB") : false;
+  // Use Alignment LA-offset
+  const bool useLAAlignmentOffsets =
+      p.existsAs<bool>("useLAAlignmentOffsets") ? p.getParameter<bool>("useLAAlignmentOffsets") : false;
+  char const* laLabel = "";  // standard LA, from calibration, label=""
+  if (useLAAlignmentOffsets) {
+    laLabel = "fromAlignment";
   }
 
-  // errors come from templates
-  ESHandle<SiPixelTemplateDBObject> templateDBobject;
-  iRecord.getRecord<SiPixelTemplateDBObjectESProducerRcd>().get(templateDBobject);
+  auto magname = p.existsAs<edm::ESInputTag>("MagneticFieldRecord")
+                     ? p.getParameter<edm::ESInputTag>("MagneticFieldRecord")
+                     : edm::ESInputTag("");
+  UseErrorsFromTemplates_ = p.getParameter<bool>("UseErrorsFromTemplates");
 
-  cpe_  = boost::shared_ptr<PixelClusterParameterEstimator>(new PixelCPEGeneric(
-										pset_,magfield.product(),*pDD.product(),*hTT.product(),lorentzAngle.product(),genErrorDBObjectProduct,
-										templateDBobject.product(),lorentzAngleWidthProduct) );
-#endif
+  pset_ = p;
+  auto c = setWhatProduced(this, myname);
+  c.setConsumes(magfieldToken_, magname)
+      .setConsumes(pDDToken_)
+      .setConsumes(hTTToken_)
+      .setConsumes(lorentzAngleToken_, edm::ESInputTag("", laLabel));
+  if (useLAWidthFromDB_) {
+    c.setConsumes(lorentzAngleWidthToken_, edm::ESInputTag("", "forWidth"));
+  }
+  if (UseErrorsFromTemplates_) {
+    c.setConsumes(genErrorDBObjectToken_);
+  }
 
-  return cpe_;
+  //std::cout<<" ESProducer "<<myname<<" "<<useLAWidthFromDB_<<" "<<useLAAlignmentOffsets_<<" "
+  //	   <<UseErrorsFromTemplates_<<std::endl; //dk
 }
 
+std::unique_ptr<PixelClusterParameterEstimator> PixelCPEGenericESProducer::produce(const TkPixelCPERecord& iRecord) {
+  // add the new la width object
+  const SiPixelLorentzAngle* lorentzAngleWidthProduct = nullptr;
+  if (useLAWidthFromDB_) {  // use the width LA
+    lorentzAngleWidthProduct = &iRecord.get(lorentzAngleWidthToken_);
+  }
+  //std::cout<<" la width "<<lorentzAngleWidthProduct<<std::endl; //dk
 
+  const SiPixelGenErrorDBObject* genErrorDBObjectProduct = nullptr;
+
+  // Errors take only from new GenError
+  if (UseErrorsFromTemplates_) {  // do only when generrors are needed
+    genErrorDBObjectProduct = &iRecord.get(genErrorDBObjectToken_);
+    //} else {
+    //std::cout<<" pass an empty GenError pointer"<<std::endl;
+  }
+  return std::make_unique<PixelCPEGeneric>(pset_,
+                                           &iRecord.get(magfieldToken_),
+                                           iRecord.get(pDDToken_),
+                                           iRecord.get(hTTToken_),
+                                           &iRecord.get(lorentzAngleToken_),
+                                           genErrorDBObjectProduct,
+                                           lorentzAngleWidthProduct);
+}
+
+DEFINE_FWK_EVENTSETUP_MODULE(PixelCPEGenericESProducer);

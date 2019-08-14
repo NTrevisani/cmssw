@@ -1,25 +1,30 @@
-
 #ifndef Alignment_CommonAlignmentAlgorithm_AlignmentGlobalTrackSelector_h
 #define Alignment_CommonAlignmentAlgorithm_AlignmentGlobalTrackSelector_h
 
+#include "DataFormats/JetReco/interface/CaloJetCollection.h"
+#include "DataFormats/MuonReco/interface/MuonFwd.h"
+
 //Framework
-#include "FWCore/Utilities/interface/InputTag.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/Utilities/interface/EDGetToken.h"
 //STL
 #include <vector>
 
-namespace edm {class Track;}
-namespace reco {class Event;}
+namespace reco {
+  class Track;
+}
+namespace edm {
+  class Event;
+  class EventSetup;
+}  // namespace edm
 
-class AlignmentGlobalTrackSelector
-{
-
- public:
-
-  typedef std::vector<const reco::Track*> Tracks; 
+class AlignmentGlobalTrackSelector {
+public:
+  typedef std::vector<const reco::Track*> Tracks;
 
   /// constructor
-  AlignmentGlobalTrackSelector(const edm::ParameterSet & cfg);
+  AlignmentGlobalTrackSelector(const edm::ParameterSet& cfg, edm::ConsumesCollector& iC);
 
   /// destructor
   ~AlignmentGlobalTrackSelector();
@@ -28,15 +33,14 @@ class AlignmentGlobalTrackSelector
   Tracks select(const Tracks& tracks, const edm::Event& iEvent, const edm::EventSetup& eSetup);
   ///returns if any of the Filters is used.
   bool useThisFilter();
- 
- private:
-  
+
+private:
   ///returns [tracks] if there are less than theMaxCount Jets with theMinJetPt and an empty set if not
-  Tracks checkJetCount(const Tracks& cands,const edm::Event& iEvent)const;
+  Tracks checkJetCount(const Tracks& cands, const edm::Event& iEvent) const;
   ///returns only isolated tracks in [cands]
-  Tracks checkIsolation(const Tracks& cands,const edm::Event& iEvent)const;
+  Tracks checkIsolation(const Tracks& cands, const edm::Event& iEvent) const;
   ///filter for Tracks that match the Track of a global Muon
-  Tracks findMuons(const Tracks& tracks,const edm::Event& iEvent)const;
+  Tracks findMuons(const Tracks& tracks, const edm::Event& iEvent) const;
 
   /// private data members
   edm::ParameterSet theConf;
@@ -47,18 +51,18 @@ class AlignmentGlobalTrackSelector
   bool theJetCountFilterSwitch;
 
   //global Muon Filter
-  edm::InputTag theMuonSource;
+  edm::EDGetTokenT<reco::MuonCollection> theMuonToken;
   double theMaxTrackDeltaR;
   int theMinGlobalMuonCount;
 
   //isolation Cut
-  edm::InputTag theJetIsoSource;
+  edm::EDGetTokenT<reco::CaloJetCollection> theJetIsoToken;
   double theMaxJetPt;
   double theMinJetDeltaR;
   int theMinIsolatedCount;
 
   //jet count Filter
-  edm::InputTag theJetCountSource;
+  edm::EDGetTokenT<reco::CaloJetCollection> theJetCountToken;
   double theMinJetPt;
   int theMaxJetCount;
 
@@ -72,4 +76,3 @@ class AlignmentGlobalTrackSelector
 };
 
 #endif
-

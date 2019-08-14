@@ -1,3 +1,4 @@
+from __future__ import print_function
 from PhysicsTools.HeppyCore.framework.analyzer import Analyzer
 
 
@@ -7,13 +8,24 @@ class EventSelector( Analyzer ):
     Example:
 
     eventSelector = cfg.Analyzer(
-    'EventSelector',
-    toSelect = [
-    1239742,
-    38001,
-    159832
-    ]
+        'EventSelector',
+        toSelect = [
+            1239742, 
+            38001,
+            159832
+        ]
     )
+
+    it can also be used with (run,lumi,event) tuples:
+
+    eventSelector = cfg.Analyzer(
+        'EventSelector',
+        toSelect = [
+            (1,40,1239742),
+            (1,38,38001),
+        ]
+    )
+
 
     The process function of this analyzer returns False if the event number
     is not in the toSelect list.
@@ -38,9 +50,9 @@ class EventSelector( Analyzer ):
         run = event.input.eventAuxiliary().id().run()
         lumi = event.input.eventAuxiliary().id().luminosityBlock()
         eId = event.input.eventAuxiliary().id().event()
-        if eId in self.cfg_ana.toSelect:
+        if eId in self.cfg_ana.toSelect or (run, lumi, eId) in self.cfg_ana.toSelect:
             # raise ValueError('found')
-            print 'Selecting', run, lumi, eId
+            print('Selecting', run, lumi, eId)
             return True 
         else:
             return False

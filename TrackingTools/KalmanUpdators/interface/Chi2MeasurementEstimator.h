@@ -14,22 +14,11 @@
 
 class Chi2MeasurementEstimator : public Chi2MeasurementEstimatorBase {
 public:
+  using Chi2MeasurementEstimatorBase::Chi2MeasurementEstimatorBase;
 
-  /** Construct with cuts on chi2 and nSigma.
-   *  The cut on Chi2 is used to define the acceptance of RecHits.
-   *  The errors of the trajectory state are multiplied by nSigma 
-   *  to define acceptance of Plane and maximalLocalDisplacement.
-   */
-  explicit Chi2MeasurementEstimator(double maxChi2, double nSigma = 3.) : 
-    Chi2MeasurementEstimatorBase( maxChi2, nSigma) {}
+  std::pair<bool, double> estimate(const TrajectoryStateOnSurface&, const TrackingRecHit&) const override;
 
-  virtual std::pair<bool,double> estimate(const TrajectoryStateOnSurface&,
-				     const TrackingRecHit&) const;
-
-  virtual Chi2MeasurementEstimator* clone() const {
-    return new Chi2MeasurementEstimator(*this);
-  }
-
+  Chi2MeasurementEstimator* clone() const override { return new Chi2MeasurementEstimator(*this); }
 };
 
 #endif

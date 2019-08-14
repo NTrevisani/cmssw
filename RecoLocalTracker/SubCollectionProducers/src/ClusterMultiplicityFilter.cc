@@ -2,7 +2,7 @@
 //
 // Package:    ClusterMultiplicityFilter
 // Class:      ClusterMultiplicityFilter
-// 
+//
 
 //
 // Original Author:  Carsten Noeding
@@ -10,69 +10,54 @@
 //
 //
 
-
 // system include files
 #include <memory>
 
 #include "RecoLocalTracker/SubCollectionProducers/interface/ClusterMultiplicityFilter.h"
-
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
-
-#include "DataFormats/SiStripCluster/interface/SiStripCluster.h"
-#include "DataFormats/Common/interface/DetSetVector.h"
-
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 
-
 ClusterMultiplicityFilter::ClusterMultiplicityFilter(const edm::ParameterSet& iConfig)
-{
-  maxNumberOfClusters_    = iConfig.getUntrackedParameter<unsigned int>("MaxNumberOfClusters");
-  clusterCollectionLabel_ = iConfig.getUntrackedParameter<std::string>("ClusterCollectionLabel");
-}
+    : maxNumberOfClusters_(iConfig.getParameter<unsigned int>("MaxNumberOfClusters")),
+      clusterCollectionTag_(iConfig.getParameter<edm::InputTag>("ClusterCollection")),
+      clusters_(consumes<edmNew::DetSetVector<SiStripCluster> >(clusterCollectionTag_)) {}
 
-
-ClusterMultiplicityFilter::~ClusterMultiplicityFilter() {
-}
-
+ClusterMultiplicityFilter::~ClusterMultiplicityFilter() {}
 
 // ------------ method called on each new Event  ------------
-bool ClusterMultiplicityFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup) {
-
+bool ClusterMultiplicityFilter::filter(edm::StreamID iID, edm::Event& iEvent, edm::EventSetup const& iSetup) const {
   bool result = true;
 
-  const edm::DetSetVector<SiStripCluster> *clusters = 0;
-  edm::Handle<edm::DetSetVector<SiStripCluster> > clusterHandle;
-  iEvent.getByLabel(clusterCollectionLabel_,clusterHandle);
-  if( !clusterHandle.isValid() ) {
+  const edmNew::DetSetVector<SiStripCluster>* clusters = nullptr;
+  edm::Handle<edmNew::DetSetVector<SiStripCluster> > clusterHandle;
+  iEvent.getByToken(clusters_, clusterHandle);
+  if (!clusterHandle.isValid()) {
     throw cms::Exception("CorruptData")
-      << "ClusterMultiplicityFilter requires collection <edm::DetSetVector<SiStripCluster> with label " << clusterCollectionLabel_ << std::endl;
+        << "ClusterMultiplicityFilter requires collection <edm::DetSetVector<SiStripCluster> with label "
+        << clusterCollectionTag_.label() << std::endl;
   }
 
   clusters = clusterHandle.product();
-  const edm::DetSetVector<SiStripCluster>& input = *clusters;
+  const edmNew::DetSetVector<SiStripCluster>& input = *clusters;
 
   unsigned int totalClusters = 0;
 
   //loop over detectors
-  for (edm::DetSetVector<SiStripCluster>::const_iterator DSViter=input.begin(); DSViter!=input.end();DSViter++ ) {
-    totalClusters+=DSViter->data.size();
+  for (edmNew::DetSetVector<SiStripCluster>::const_iterator DSViter = input.begin(); DSViter != input.end();
+       DSViter++) {
+    totalClusters += DSViter->size();
   }
-  
-  
-  if (totalClusters>maxNumberOfClusters_) {
-    edm::LogInfo("ClusterMultiplicityFilter") << "Total number of clusters: " << totalClusters << " ==> exceeds allowed maximum of " << maxNumberOfClusters_ << " clusters";
+
+  if (totalClusters > maxNumberOfClusters_) {
+    edm::LogInfo("ClusterMultiplicityFilter")
+        << "Total number of clusters: " << totalClusters << " ==> exceeds allowed maximum of " << maxNumberOfClusters_
+        << " clusters";
     result = false;
   }
-  
+
   return result;
 }
 
-
-void ClusterMultiplicityFilter::beginJob() {
-}
-
-
-// ------------ method called once each job just after ending the event loop  ------------
-void ClusterMultiplicityFilter::endJob() {
-}
-
+#include "FWCore/PluginManager/interface/ModuleDef.h"
+#include "FWCore/Framework/interface/MakerMacros.h"
+DEFINE_FWK_MODULE(ClusterMultiplicityFilter);

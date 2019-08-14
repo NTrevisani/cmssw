@@ -9,6 +9,9 @@
  *
  *  \author N. Amapane - CERN <nicola.amapane@cern.ch>
  *  \author R. Bellan - INFN Torino <riccardo.bellan@cern.ch>
+ *
+ *  Modified by C. Calabria
+ *  Modified by D. Nash
  */
 
 #include "FWCore/Framework/interface/ESHandle.h"
@@ -19,7 +22,10 @@
 #include "TrackingTools/GeomPropagators/interface/Propagator.h"
 #include "RecoMuon/Navigation/interface/MuonNavigationSchool.h"
 
-namespace edm {class ParameterSet; class EventSetup;}
+namespace edm {
+  class ParameterSet;
+  class EventSetup;
+}  // namespace edm
 
 class MuonServiceProxy {
 public:
@@ -30,43 +36,43 @@ public:
   virtual ~MuonServiceProxy();
 
   // Operations
-  
+
   /// update the services each event
   void update(const edm::EventSetup& setup);
 
   /// get the magnetic field
-  edm::ESHandle<MagneticField> magneticField() const {return theMGField;}
+  edm::ESHandle<MagneticField> magneticField() const { return theMGField; }
 
   /// get the tracking geometry
-  edm::ESHandle<GlobalTrackingGeometry> trackingGeometry() const {return theTrackingGeometry;}
+  edm::ESHandle<GlobalTrackingGeometry> trackingGeometry() const { return theTrackingGeometry; }
 
   /// get the detLayer geometry
-  edm::ESHandle<MuonDetLayerGeometry> detLayerGeometry() const {return theDetLayerGeometry;}
+  edm::ESHandle<MuonDetLayerGeometry> detLayerGeometry() const { return theDetLayerGeometry; }
 
   /// get the propagator
   edm::ESHandle<Propagator> propagator(std::string propagatorName) const;
 
   /// get the whole EventSetup
-  const edm::EventSetup &eventSetup() const {return *theEventSetup;}
-  
-  /// check if the MuonReco Geometry has been changed
-  bool isTrackingComponentsRecordChanged() const {return theChangeInTrackingComponentsRecord;}
-  
-  const MuonNavigationSchool *muonNavigationSchool() const{
-    return theSchool;
-  }
+  const edm::EventSetup& eventSetup() const { return *theEventSetup; }
 
- protected:
-  
- private:
-  typedef std::map<std::string,  edm::ESHandle<Propagator> > propagators;
-  
+  /// check if the MuonReco Geometry has been changed
+  bool isTrackingComponentsRecordChanged() const { return theChangeInTrackingComponentsRecord; }
+
+  const MuonNavigationSchool* muonNavigationSchool() const { return theSchool; }
+
+protected:
+private:
+  typedef std::map<std::string, edm::ESHandle<Propagator> > propagators;
+
   edm::ESHandle<GlobalTrackingGeometry> theTrackingGeometry;
   edm::ESHandle<MagneticField> theMGField;
   edm::ESHandle<MuonDetLayerGeometry> theDetLayerGeometry;
-  const edm::EventSetup *theEventSetup;
+  const edm::EventSetup* theEventSetup;
   bool theMuonNavigationFlag;
   bool theRPCLayer;
+  bool theCSCLayer;
+  bool theGEMLayer;
+  bool theME0Layer;
   const MuonNavigationSchool* theSchool;
 
   propagators thePropagators;
@@ -75,9 +81,7 @@ public:
   unsigned long long theCacheId_MG;
   unsigned long long theCacheId_DG;
   unsigned long long theCacheId_P;
-  
-  bool theChangeInTrackingComponentsRecord;
 
+  bool theChangeInTrackingComponentsRecord;
 };
 #endif
-

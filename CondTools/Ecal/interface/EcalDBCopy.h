@@ -2,7 +2,7 @@
 #define ECALDBCOPY_H
 
 #include "FWCore/Framework/interface/EDAnalyzer.h"
-#include "CondCore/DBCommon/interface/Exception.h"
+#include "CondCore/CondDB/interface/Exception.h"
 
 #include "FWCore/Framework/interface/IOVSyncValue.h"
 
@@ -13,16 +13,16 @@ namespace edm {
   class ParameterSet;
   class Event;
   class EventSetup;
-}
+}  // namespace edm
 
-class  EcalDBCopy : public edm::EDAnalyzer {
- public:
-  explicit  EcalDBCopy(const edm::ParameterSet& iConfig );
-  ~EcalDBCopy();
+class EcalDBCopy : public edm::EDAnalyzer {
+public:
+  explicit EcalDBCopy(const edm::ParameterSet& iConfig);
+  ~EcalDBCopy() override;
 
-  virtual void analyze( const edm::Event& evt, const edm::EventSetup& evtSetup);
+  void analyze(const edm::Event& evt, const edm::EventSetup& evtSetup) override;
 
- private:
+private:
   bool shouldCopy(const edm::EventSetup& evtSetup, std::string container);
   void copyToDB(const edm::EventSetup& evtSetup, std::string container);
 

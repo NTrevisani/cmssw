@@ -1,41 +1,33 @@
-#ifndef SimG4Core_CustomPhysicsListSS_H
-#define SimG4Core_CustomPhysicsListSS_H
-
-#include "SimG4Core/CustomPhysics/interface/HadronicProcessHelper.hh"
-
-#include <string>
+#ifndef SimG4Core_CustomPhysics_CustomPhysicsListSS_H
+#define SimG4Core_CustomPhysics_CustomPhysicsListSS_H
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
- 
 #include "G4VPhysicsConstructor.hh"
+#include <string>
 
 class G4ProcessHelper;
+class CustomParticleFactory;
 
-class CustomPhysicsListSS : public G4VPhysicsConstructor 
-{
+class CustomPhysicsListSS : public G4VPhysicsConstructor {
 public:
-  CustomPhysicsListSS(std::string name, const edm::ParameterSet & p);
-  virtual ~CustomPhysicsListSS();
+  CustomPhysicsListSS(const std::string& name, const edm::ParameterSet& p, bool useuni = false);
+  ~CustomPhysicsListSS() override;
 
-  virtual void ConstructParticle();
-  virtual void ConstructProcess();
-
-protected:
-
-  void addCustomPhysics();
+  void ConstructParticle() override;
+  void ConstructProcess() override;
 
 private:
+  static G4ThreadLocal std::unique_ptr<G4ProcessHelper> myHelper;
 
-  void setupRHadronPhycis(G4ParticleDefinition* particle);
-  void setupSUSYPhycis(G4ParticleDefinition* particle);
+  std::unique_ptr<CustomParticleFactory> fParticleFactory;
 
-  G4ProcessHelper *myHelper;
+  bool fHadronicInteraction;
 
   edm::ParameterSet myConfig;
 
   std::string particleDefFilePath;
   std::string processDefFilePath;
-
+  double dfactor;
 };
- 
+
 #endif

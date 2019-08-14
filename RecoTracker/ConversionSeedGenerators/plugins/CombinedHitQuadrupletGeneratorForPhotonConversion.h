@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <memory>
-#include "RecoTracker/TkHitPairs/interface/HitPairGenerator.h"
+#include "RecoTracker/TkHitPairs/interface/OrderedHitPairs.h"
 #include "RecoTracker/TkHitPairs/interface/LayerHitMapCache.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/EDGetToken.h"
@@ -12,7 +12,12 @@ class TrackingRegion;
 class OrderedHitPairs;
 class HitQuadrupletGeneratorFromLayerPairForPhotonConversion;
 class SeedingLayerSetsHits;
-namespace edm { class Event; class EventSetup; }
+namespace edm {
+  class Event;
+  class EventSetup;
+  class ParameterSet;
+  class ConsumesCollector;
+}  // namespace edm
 
 #include "ConversionRegion.h"
 
@@ -20,39 +25,31 @@ namespace edm { class Event; class EventSetup; }
  * Hides set of HitQuadrupletGeneratorFromLayerPairForPhotonConversion generators.
  */
 
-class CombinedHitQuadrupletGeneratorForPhotonConversion : public HitPairGenerator {
+class CombinedHitQuadrupletGeneratorForPhotonConversion {
 public:
   typedef LayerHitMapCache LayerCacheType;
 
 public:
-  CombinedHitQuadrupletGeneratorForPhotonConversion(const edm::ParameterSet & cfg, edm::ConsumesCollector& iC);
-  virtual ~CombinedHitQuadrupletGeneratorForPhotonConversion();
+  CombinedHitQuadrupletGeneratorForPhotonConversion(const edm::ParameterSet& cfg, edm::ConsumesCollector& iC);
+  ~CombinedHitQuadrupletGeneratorForPhotonConversion();
 
-  void setSeedingLayers(SeedingLayerSetsHits::SeedingLayerSet layers) override;
+  void hitPairs(const TrackingRegion&, OrderedHitPairs&, const edm::Event&, const edm::EventSetup&);
 
-  /// form base class
-  virtual void hitPairs(const TrackingRegion&, OrderedHitPairs&, const edm::Event&, const edm::EventSetup&);
+  const OrderedHitPairs& run(const TrackingRegion& region, const edm::Event& ev, const edm::EventSetup& es);
 
-  /// from base class
-  virtual CombinedHitQuadrupletGeneratorForPhotonConversion * clone() const 
-    { return new CombinedHitQuadrupletGeneratorForPhotonConversion(*this); }
-
-  const OrderedHitPairs & run(const TrackingRegion& region, const edm::Event & ev, const edm::EventSetup& es);
-
-
-  void clearLayerCache(){theLayerCache.clear();}
+  void clearLayerCache() { theLayerCache.clear(); }
 
   /*------------------------*/
 private:
-  CombinedHitQuadrupletGeneratorForPhotonConversion(const CombinedHitQuadrupletGeneratorForPhotonConversion & cb); 
+  CombinedHitQuadrupletGeneratorForPhotonConversion(const CombinedHitQuadrupletGeneratorForPhotonConversion& cb) =
+      delete;
 
   edm::EDGetTokenT<SeedingLayerSetsHits> theSeedingLayerToken;
-
-  LayerCacheType   theLayerCache;
+  const unsigned int theMaxElement;
+  LayerCacheType theLayerCache;
 
   std::unique_ptr<HitQuadrupletGeneratorFromLayerPairForPhotonConversion> theGenerator;
 
   OrderedHitPairs thePairs;
-
 };
 #endif

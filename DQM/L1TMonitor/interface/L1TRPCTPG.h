@@ -22,10 +22,8 @@
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "DataFormats/Common/interface/Handle.h"
 #include "DQMServices/Core/interface/DQMStore.h"
-#include "DQMServices/Core/interface/MonitorElement.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
-
 
 ///Data Format
 #include "DataFormats/RPCDigi/interface/RPCDigi.h"
@@ -56,48 +54,42 @@
 //
 
 class L1TRPCTPG : public DQMEDAnalyzer {
-
 public:
+  // Constructor
+  L1TRPCTPG(const edm::ParameterSet& ps);
 
-// Constructor
- L1TRPCTPG(const edm::ParameterSet& ps);
-
-// Destructor
- virtual ~L1TRPCTPG();
+  // Destructor
+  ~L1TRPCTPG() override;
 
 protected:
-// Analyze
- void analyze(const edm::Event& e, const edm::EventSetup& c);
+  // Analyze
+  void analyze(const edm::Event& e, const edm::EventSetup& c) override;
 
-// BeginRun
- virtual void bookHistograms(DQMStore::IBooker &ibooker, edm::Run const&, edm::EventSetup const&) override;
- virtual void dqmBeginRun(edm::Run const&, edm::EventSetup const&);
- virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
+  // BeginRun
+  void bookHistograms(DQMStore::IBooker& ibooker, edm::Run const&, edm::EventSetup const&) override;
+  void dqmBeginRun(edm::Run const&, edm::EventSetup const&) override;
 
 private:
   // ----------member data ---------------------------
- 
+
   MonitorElement* rpctpgndigi[3];
   MonitorElement* rpctpgbx;
   MonitorElement* m_digiBxRPCBar;
   MonitorElement* m_digiBxRPCEnd;
   MonitorElement* m_digiBxDT;
   MonitorElement* m_digiBxCSC;
-  MonitorElement* runId_;
-  MonitorElement* lumisecId_;
-  
-  std::map<uint32_t, std::map<std::string, MonitorElement*> >  rpctpgmeCollection;
 
-  int nev_; // Number of events processed
-  std::string outputFile_; //file name for ROOT ouput
+  std::map<uint32_t, std::map<std::string, MonitorElement*> > rpctpgmeCollection;
+
+  int nev_;                 // Number of events processed
+  std::string outputFile_;  //file name for ROOT ouput
   bool verbose_;
   bool monitorDaemon_;
   std::ofstream logFile_;
   edm::InputTag rpctpgSource_;
   edm::EDGetTokenT<RPCDigiCollection> rpctpgSource_token_;
-  edm::InputTag rpctfSource_ ;
-  edm::EDGetTokenT<L1MuGMTReadoutCollection> rpctfSource_token_ ;
-
+  edm::InputTag rpctfSource_;
+  edm::EDGetTokenT<L1MuGMTReadoutCollection> rpctfSource_token_;
 };
 
 #endif

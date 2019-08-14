@@ -1,8 +1,10 @@
+from __future__ import absolute_import
 import unittest
 import os
 import shutil
+import copy
 
-from PhysicsTools.HeppyCore.framework.config import *
+from .config import *
 
 class ConfigTestCase(unittest.TestCase):
 
@@ -48,8 +50,19 @@ class ConfigTestCase(unittest.TestCase):
                          services = [],
                          events_class = Events )
 
-
-
+    def test_copy(self):
+        class Ana1(object):
+            pass
+        ana1 = Analyzer(
+            Ana1,
+            instance_label = 'inst1',
+            toto = '1',
+            )        
+        ana2 = copy.copy(ana1)
+        ana2.instance_label = 'inst2'
+        ana2.toto2 = '2'
+        self.assertEqual(ana2.name, '__main__.Ana1_inst2')
+        self.assertEqual(ana2.toto2, '2')
 
 if __name__ == '__main__':
     unittest.main()

@@ -5,7 +5,7 @@
 //
 // Package:    CATopJetTagger
 // Class:      CATopJetTagger
-// 
+//
 /**\class CATopJetTagger CATopJetTagger.cc TopQuarkAnalysis/TopJetProducers/src/CATopJetTagger.cc
 
  Description: This is a tagger to identify boosted top quark jets.
@@ -26,7 +26,6 @@
 //
 //
 
-
 // system include files
 #include <memory>
 #include <vector>
@@ -34,7 +33,7 @@
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/global/EDProducer.h"
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
@@ -57,34 +56,27 @@
 #include <TH2.h>
 #include <TTree.h>
 
-
 //
 // class decleration
 //
 
-class CATopJetTagger : public edm::EDProducer {
-   public:
-      explicit CATopJetTagger(const edm::ParameterSet&);
-      ~CATopJetTagger();
+class CATopJetTagger : public edm::global::EDProducer<> {
+public:
+  explicit CATopJetTagger(const edm::ParameterSet&);
+  ~CATopJetTagger() override;
 
+private:
+  void produce(edm::StreamID, edm::Event&, const edm::EventSetup&) const override;
 
-   private:
-      virtual void beginJob() ;
-      virtual void produce( edm::Event&, const edm::EventSetup&);
-      virtual void endJob() ;
+  // ----------member data ---------------------------
 
-      // ----------member data ---------------------------
+  const edm::InputTag src_;
 
-  edm::InputTag   src_;
+  const double TopMass_;
+  const double WMass_;
+  const bool verbose_;
 
-  double      TopMass_;
-  double      WMass_;
-  bool        verbose_;
-
-  edm::EDGetTokenT<edm::View<reco::Jet> > input_jet_token_;
-
+  const edm::EDGetTokenT<edm::View<reco::Jet> > input_jet_token_;
 };
-
-
 
 #endif

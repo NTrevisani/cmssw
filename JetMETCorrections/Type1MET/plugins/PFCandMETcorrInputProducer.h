@@ -27,44 +27,30 @@
 
 #include <string>
 
-class PFCandMETcorrInputProducer : public edm::stream::EDProducer<>  
-{
- public:
-
+class PFCandMETcorrInputProducer : public edm::stream::EDProducer<> {
+public:
   explicit PFCandMETcorrInputProducer(const edm::ParameterSet&);
-  ~PFCandMETcorrInputProducer();
-    
- private:
+  ~PFCandMETcorrInputProducer() override;
 
-  void produce(edm::Event&, const edm::EventSetup&);
+private:
+  void produce(edm::Event&, const edm::EventSetup&) override;
 
   std::string moduleLabel_;
 
   edm::EDGetTokenT<edm::View<reco::Candidate> > token_;
 
-  struct binningEntryType
-  {
-    binningEntryType()
-      : binLabel_(""),
-        binSelection_(0)
-    {}
+  struct binningEntryType {
+    binningEntryType() : binLabel_(""), binSelection_(nullptr) {}
     binningEntryType(const edm::ParameterSet& cfg)
-    : binLabel_(cfg.getParameter<std::string>("binLabel")),
-      binSelection_(new StringCutObjectSelector<reco::Candidate::LorentzVector>(cfg.getParameter<std::string>("binSelection")))
-    {}
-    ~binningEntryType() 
-    {
-      delete binSelection_;
-    }
-    std::string binLabel_;
-    StringCutObjectSelector<reco::Candidate::LorentzVector>* binSelection_;
+        : binLabel_(cfg.getParameter<std::string>("binLabel")),
+          binSelection_(new StringCutObjectSelector<reco::Candidate::LorentzVector>(
+              cfg.getParameter<std::string>("binSelection"))) {}
+    ~binningEntryType() {}
+    const std::string binLabel_;
+    std::unique_ptr<const StringCutObjectSelector<reco::Candidate::LorentzVector> > binSelection_;
     CorrMETData binUnclEnergySum_;
   };
-  std::vector<binningEntryType*> binning_;
+  std::vector<std::unique_ptr<binningEntryType> > binning_;
 };
 
 #endif
-
-
- 
-

@@ -7,7 +7,7 @@
  *
  **/
 
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/global/EDProducer.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -15,33 +15,25 @@
 #include "RecoLocalCalo/EcalRecAlgos/interface/EcalRecHitAbsAlgo.h"
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 
+class EcalRecalibRecHitProducer : public edm::global::EDProducer<> {
+public:
+  explicit EcalRecalibRecHitProducer(const edm::ParameterSet& ps);
+  void produce(edm::StreamID sid, edm::Event& evt, const edm::EventSetup& es) const override;
 
+private:
+  const edm::InputTag EBRecHitCollection_;
+  const edm::InputTag EERecHitCollection_;
+  const edm::EDGetTokenT<EBRecHitCollection> EBRecHitToken_;
+  const edm::EDGetTokenT<EERecHitCollection> EERecHitToken_;
 
-class EcalRecalibRecHitProducer : public edm::EDProducer {
+  const std::string EBRecalibRecHitCollection_;  // secondary name to be given to EB collection of hits
+  const std::string EERecalibRecHitCollection_;  // secondary name to be given to EE collection of hits
 
-        public:
-                explicit EcalRecalibRecHitProducer(const edm::ParameterSet& ps);
-                ~EcalRecalibRecHitProducer();
-                virtual void produce(edm::Event& evt, const edm::EventSetup& es);
-
-        private:
-
-		edm::InputTag EBRecHitCollection_;
-		edm::InputTag EERecHitCollection_;
-		edm::EDGetTokenT<EBRecHitCollection> EBRecHitToken_;
-		edm::EDGetTokenT<EERecHitCollection> EERecHitToken_;
-		  
-                std::string EBRecalibRecHitCollection_; // secondary name to be given to EB collection of hits
-                std::string EERecalibRecHitCollection_; // secondary name to be given to EE collection of hits
-
-                bool doEnergyScale_;
-                bool doIntercalib_;
-                bool doLaserCorrections_;
-		bool doEnergyScaleInverse_;
-		bool doIntercalibInverse_;
-                bool doLaserCorrectionsInverse_;
-
-                EcalRecHitAbsAlgo* EBalgo_;
-                EcalRecHitAbsAlgo* EEalgo_;
+  const bool doEnergyScale_;
+  const bool doIntercalib_;
+  const bool doLaserCorrections_;
+  const bool doEnergyScaleInverse_;
+  const bool doIntercalibInverse_;
+  const bool doLaserCorrectionsInverse_;
 };
 #endif

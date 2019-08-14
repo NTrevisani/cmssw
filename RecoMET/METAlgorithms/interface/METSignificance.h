@@ -2,7 +2,7 @@
 //
 // Package:    METAlgorithms
 // Class:      METSignificance
-// 
+//
 /**\class METSignificance METSignificance.cc RecoMET/METAlgorithms/src/METSignificance.cc
 Description: [one line class summary]
 Implementation:
@@ -18,6 +18,8 @@ Implementation:
 //____________________________________________________________________________||
 #include "CondFormats/JetMETObjects/interface/JetResolution.h"
 
+#include "JetMETCorrections/Modules/interface/JetResolution.h"
+
 #include "DataFormats/JetReco/interface/Jet.h"
 #include "DataFormats/METReco/interface/MET.h"
 #include "DataFormats/Candidate/interface/Candidate.h"
@@ -30,34 +32,33 @@ Implementation:
 //____________________________________________________________________________||
 namespace metsig {
 
-   class METSignificance {
-      public:
-         METSignificance(const edm::ParameterSet& iConfig);
-         ~METSignificance();
+  class METSignificance {
+  public:
+    METSignificance(const edm::ParameterSet& iConfig);
+    ~METSignificance();
 
-         reco::METCovMatrix getCovariance(const edm::View<reco::Jet>& jets,
-					  const std::vector<reco::Candidate::LorentzVector>& leptons,
-					  const edm::View<reco::Candidate>& pfCandidates);
-     double getSignificance(const reco::METCovMatrix& cov, const reco::MET& met ) const;
+    reco::METCovMatrix getCovariance(const edm::View<reco::Jet>& jets,
+                                     const std::vector<edm::Handle<reco::CandidateView> >& leptons,
+                                     const edm::Handle<edm::View<reco::Candidate> >& pfCandidates,
+                                     double rho,
+                                     JME::JetResolution& resPtObj,
+                                     JME::JetResolution& resPhiObj,
+                                     JME::JetResolutionScaleFactor& resSFObj,
+                                     bool isRealData);
 
-      private:
-         std::vector<reco::Jet> cleanJets(const edm::View<reco::Jet>& jets, 
-					  const std::vector<reco::Candidate::LorentzVector>& leptons);
-         bool cleanJet(const reco::Jet& jet, 
-		   const std::vector<reco::Candidate::LorentzVector>& leptons);
+    static double getSignificance(const reco::METCovMatrix& cov, const reco::MET& met);
 
-         double jetThreshold_;
-         double dR2match_;
-         std::vector<double> jetEtas_;
-         std::vector<double> jetParams_;
-         std::vector<double> pjetParams_;
+  private:
+    bool cleanJet(const reco::Jet& jet, const std::vector<edm::Handle<reco::CandidateView> >& leptons);
 
-         JetResolution* ptRes_;
-         JetResolution* phiRes_;
+    double jetThreshold_;
+    double dR2match_;
+    std::vector<double> jetEtas_;
+    std::vector<double> jetParams_;
+    std::vector<double> pjetParams_;
+  };
 
-   };
-
-}
+}  // namespace metsig
 
 //____________________________________________________________________________||
-#endif // METAlgorithms_METSignificance_h
+#endif  // METAlgorithms_METSignificance_h

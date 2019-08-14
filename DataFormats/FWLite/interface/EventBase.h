@@ -17,7 +17,6 @@
 // Original Author:  Charles Plager
 //         Created:  Tue May  8 15:01:20 EDT 2007
 //
-#if !defined(__CINT__) && !defined(__MAKECINT__)
 // system include files
 #include <string>
 #include <typeinfo>
@@ -28,51 +27,39 @@
 #include "Rtypes.h"
 
 namespace edm {
-   class BasicHandle;
-   class ProductID;
-   class WrapperBase;
-}
+  class BasicHandle;
+  class ProductID;
+  class WrapperBase;
+}  // namespace edm
 
-namespace fwlite
-{
-   class EventBase : public edm::EventBase
-   {
-      public:
-         EventBase();
+namespace fwlite {
+  class EventBase : public edm::EventBase {
+  public:
+    EventBase();
 
-         virtual ~EventBase();
+    ~EventBase() override;
 
-         virtual bool getByLabel(
-                                  std::type_info const&,
-                                  char const*,
-                                  char const*,
-                                  char const*,
-                                  void*) const = 0;
+    virtual bool getByLabel(std::type_info const&, char const*, char const*, char const*, void*) const = 0;
 
-         virtual edm::WrapperBase const* getByProductID(edm::ProductID const&) const = 0;
+    virtual edm::WrapperBase const* getByProductID(edm::ProductID const&) const = 0;
 
-         using edm::EventBase::getByLabel;
+    using edm::EventBase::getByLabel;
 
-         virtual std::string const getBranchNameFor (std::type_info const&,
-                                                     char const*,
-                                                     char const*,
-                                                     char const*) const = 0;
+    virtual std::string const getBranchNameFor(std::type_info const&, char const*, char const*, char const*) const = 0;
 
-         virtual bool atEnd() const = 0;
+    virtual bool atEnd() const = 0;
 
-         virtual EventBase const& operator++() = 0;
+    virtual EventBase const& operator++() = 0;
 
-         virtual EventBase const& toBegin() = 0;
+    virtual EventBase const& toBegin() = 0;
 
-         virtual Long64_t fileIndex()          const { return -1; }
-         virtual Long64_t secondaryFileIndex() const { return -1; }
+    virtual Long64_t fileIndex() const { return -1; }
+    virtual Long64_t secondaryFileIndex() const { return -1; }
 
-      private:
+  private:
+    edm::BasicHandle getByLabelImpl(std::type_info const&, std::type_info const&, const edm::InputTag&) const override;
+    edm::BasicHandle getImpl(std::type_info const&, edm::ProductID const&) const override;
+  };
+}  // namespace fwlite
 
-         virtual edm::BasicHandle getByLabelImpl(std::type_info const&, std::type_info const&, const edm::InputTag&) const;
-         virtual edm::BasicHandle getImpl(std::type_info const&, edm::ProductID const&) const;
-   };
-} // fwlite namespace
-
-#endif /*__CINT__ */
 #endif

@@ -1,4 +1,4 @@
-#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "FWCore/Framework/interface/one/EDAnalyzer.h"
 #include "FWCore/Framework/interface/ESTransientHandle.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
@@ -12,64 +12,41 @@
 #include "Geometry/Records/interface/GEMRecoGeometryRcd.h"
 #include "Geometry/Records/interface/MuonNumberingRecord.h"
 
-#include <iostream>
-
-using namespace std;
-
-class GEMRecoIdealDBLoader : public edm::EDAnalyzer
-{
+class GEMRecoIdealDBLoader : public edm::one::EDAnalyzer<edm::one::WatchRuns> {
 public:
-  
-  explicit GEMRecoIdealDBLoader( const edm::ParameterSet& );
-  ~GEMRecoIdealDBLoader( void );
-  
-  virtual void beginRun( const edm::Run&, edm::EventSetup const& );
-  virtual void analyze( const edm::Event&, const edm::EventSetup& ) {}
-  virtual void endJob( void ) {};
+  GEMRecoIdealDBLoader(const edm::ParameterSet&) {}
+
+  void beginRun(edm::Run const& iEvent, edm::EventSetup const&) override;
+  void analyze(edm::Event const& iEvent, edm::EventSetup const&) override {}
+  void endRun(edm::Run const& iEvent, edm::EventSetup const&) override {}
 };
 
-GEMRecoIdealDBLoader::GEMRecoIdealDBLoader( const edm::ParameterSet& )
-{
-  std::cout << "GEMRecoIdealDBLoader::GEMRecoIdealDBLoader" << std::endl;
-}
+void GEMRecoIdealDBLoader::beginRun(const edm::Run&, edm::EventSetup const& es) {
+  edm::LogInfo("GEMRecoIdealDBLoader") << "GEMRecoIdealDBLoader::beginRun";
 
-GEMRecoIdealDBLoader::~GEMRecoIdealDBLoader()
-{
-  std::cout << "GEMRecoIdealDBLoader::~GEMRecoIdealDBLoader" << std::endl;
-}
-
-void
-GEMRecoIdealDBLoader::beginRun( const edm::Run&, edm::EventSetup const& es ) 
-{
   edm::Service<cond::service::PoolDBOutputService> mydbservice;
-  if( !mydbservice.isAvailable())
-  {
-    edm::LogError( "GEMRecoIdealDBLoader" ) << "PoolDBOutputService unavailable";
+  if (!mydbservice.isAvailable()) {
+    edm::LogError("GEMRecoIdealDBLoader") << "PoolDBOutputService unavailable";
     return;
   }
 
-  if( mydbservice->isNewTagRequest( "GEMRecoGeometryRcd" ))
-  {
+  if (mydbservice->isNewTagRequest("GEMRecoGeometryRcd")) {
     edm::ESTransientHandle<DDCompactView> pDD;
     edm::ESHandle<MuonDDDConstants> pMNDC;
-    es.get<IdealGeometryRecord>().get( pDD );
-    es.get<MuonNumberingRecord>().get( pMNDC );
+    es.get<IdealGeometryRecord>().get(pDD);
+    es.get<MuonNumberingRecord>().get(pMNDC);
 
     const DDCompactView& cpv = *pDD;
     GEMGeometryParsFromDD rpcpd;
 
     RecoIdealGeometry* rig = new RecoIdealGeometry;
-    rpcpd.build( &cpv, *pMNDC, *rig );
+    rpcpd.build(&cpv, *pMNDC, *rig);
 
-    mydbservice->createNewIOV<RecoIdealGeometry>( rig,
-						  mydbservice->beginOfTime(),                                                 
-						  mydbservice->endOfTime(),
-						  "GEMRecoGeometryRcd" );
-  }
-  else
-  {
-    edm::LogError( "GEMRecoIdealDBLoader" ) << "GEMRecoGeometryRcd Tag is already present";
+    mydbservice->createNewIOV<RecoIdealGeometry>(
+        rig, mydbservice->beginOfTime(), mydbservice->endOfTime(), "GEMRecoGeometryRcd");
+  } else {
+    edm::LogError("GEMRecoIdealDBLoader") << "GEMRecoGeometryRcd Tag is already present";
   }
 }
 
-DEFINE_FWK_MODULE( GEMRecoIdealDBLoader );
+DEFINE_FWK_MODULE(GEMRecoIdealDBLoader);

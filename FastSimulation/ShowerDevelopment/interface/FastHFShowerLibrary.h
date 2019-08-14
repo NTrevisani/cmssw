@@ -10,15 +10,15 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 
-#include "FastSimulation/Particle/interface/RawParticle.h"
-#include "FastSimulation/ShowerDevelopment/interface/FastHFFibre.h"
 #include "FastSimulation/Utilities/interface/FamosDebug.h"
-#include "SimDataFormats/CaloHit/interface/HFShowerPhoton.h"
+
 #include "DetectorDescription/Core/interface/DDsvalues.h"
 #include "DataFormats/Math/interface/Vector3D.h"
 
+#include "SimG4CMS/Calo/interface/HFShowerLibrary.h"
 #include "SimG4CMS/Calo/interface/CaloHitID.h"
 #include "Geometry/HcalCommonData/interface/HcalNumberingFromDDD.h"
+#include "Geometry/HcalCommonData/interface/HcalDDDSimConstants.h"
 #include "SimG4CMS/Calo/interface/HcalNumberingScheme.h"
 #include "G4ThreeVector.hh"
 
@@ -31,75 +31,36 @@
 #include <memory>
 #include <map>
 
-class DDCompactView;    
+class DDCompactView;
 class FSimEvent;
 class FSimTrack;
+class HFShowerLibrary;
+class RandomEngineAndDistribution;
 
 class FastHFShowerLibrary {
-  
 public:
-
-// Constructor and Destructor
-  FastHFShowerLibrary(edm::ParameterSet const & p);
-  ~FastHFShowerLibrary();
+  // Constructor and Destructor
+  FastHFShowerLibrary(edm::ParameterSet const& p);
+  ~FastHFShowerLibrary() { ; }
 
 public:
+  void const initHFShowerLibrary(const edm::EventSetup&);
+  void recoHFShowerLibrary(const FSimTrack& myTrack);
+  void modifyDepth(HcalNumberingFromDDD::HcalID& id);
+  const std::map<CaloHitID, float>& getHitsMap() { return hitMap; };
 
-  struct Hit {
-    Hit() {}
-    G4ThreeVector             position;
-    int                       depth;
-    double                    time;
-  };
-
-  void                initRun();
-  void       const    initHFShowerLibrary(const edm::EventSetup& );
-  void                recoHFShowerLibrary(const FSimTrack &myTrack);
-  std::vector<Hit>    getHits(const G4ThreeVector & p, const G4ThreeVector & v,
-                              int parCode, double parEnergy, bool &ok, 
-                              double weight, bool onlyLong=false);
-  const std::map<CaloHitID,float>& getHitsMap() { return hitMap; };
-  bool                isItinFidVolume (G4ThreeVector&);
-
-protected:
-
-  bool                rInside(double r);
-  void                getRecord(int, int);
-  void                loadEventInfo(TBranch *);
-  void                interpolate(int, double);
-  void                extrapolate(int, double);
-  void                storePhoton(int j);
-  std::vector<double> getDDDArray(const std::string&, const DDsvalues_type&,
-				  int&);
+  void SetRandom(const RandomEngineAndDistribution*);
 
 private:
+  const edm::ParameterSet fast;
+  std::unique_ptr<HFShowerLibrary> hfshower;
+  std::unique_ptr<HcalNumberingFromDDD> numberingFromDDD;
+  const HcalDDDSimConstants* hcalConstants;
+  HcalNumberingScheme numberingScheme;
 
-  FastHFFibre *       fibre;
-  TFile *             hf;
-  TBranch             *emBranch, *hadBranch;
+  std::map<CaloHitID, float> hitMap;
 
-  HcalNumberingScheme  *numberingScheme;
-  HcalNumberingFromDDD *numberingFromDDD;
-  std::map<CaloHitID,float> hitMap;
-  double              cFibre;
-
-  bool                verbose, applyFidCut, newForm;
-  int                 nMomBin, totEvents, evtPerBin;
-  float               libVers, listVersion; 
-  std::vector<double> pmom;
-
-  double              probMax, backProb;
-  double              dphi, rMin, rMax;
-  std::vector<double> gpar;
-
-  int                 emPDG, epPDG, gammaPDG;
-  int                 pi0PDG, etaPDG, nuePDG, numuPDG, nutauPDG;
-  int                 anuePDG, anumuPDG, anutauPDG, geantinoPDG;
-
-  int                 npe;
-  HFShowerPhotonCollection pe;
-  HFShowerPhotonCollection* photo;
-  HFShowerPhotonCollection photon;
-
+  bool applyFidCut;
+  std::string name;
 };
 #endif

@@ -24,27 +24,17 @@
 // Class header file
 #include "RecoEcal/EgammaClusterProducers/interface/RecHitFilter.h"
 
-
 RecHitFilter::RecHitFilter(const edm::ParameterSet& ps)
-{
-
-  noiseEnergyThreshold_  = ps.getParameter<double>("noiseEnergyThreshold");
-  noiseChi2Threshold_    = ps.getParameter<double>("noiseChi2Threshold");
-  hitCollection_         = 
-	  consumes<EcalRecHitCollection>(ps.getParameter<edm::InputTag>("hitCollection"));
-  reducedHitCollection_  = ps.getParameter<std::string>("reducedHitCollection");
-
-  produces< EcalRecHitCollection >(reducedHitCollection_);
+    : noiseEnergyThreshold_(ps.getParameter<double>("noiseEnergyThreshold")),
+      noiseChi2Threshold_(ps.getParameter<double>("noiseChi2Threshold")),
+      reducedHitCollection_(ps.getParameter<std::string>("reducedHitCollection")),
+      hitCollection_(consumes<EcalRecHitCollection>(ps.getParameter<edm::InputTag>("hitCollection"))) {
+  produces<EcalRecHitCollection>(reducedHitCollection_);
 }
 
+RecHitFilter::~RecHitFilter() {}
 
-RecHitFilter::~RecHitFilter()
-{
-}
-
-
-void RecHitFilter::produce(edm::Event& evt, const edm::EventSetup& es)
-{
+void RecHitFilter::produce(edm::StreamID, edm::Event& evt, const edm::EventSetup& es) const {
   // get the hit collection from the event:
   edm::Handle<EcalRecHitCollection> rhcHandle;
   evt.getByToken(hitCollection_, rhcHandle);
@@ -53,20 +43,19 @@ void RecHitFilter::produce(edm::Event& evt, const edm::EventSetup& es)
   int nTot = hit_collection->size();
   int nRed = 0;
 
-  // create an auto_ptr to a BasicClusterCollection, copy the clusters into it and put in the Event:
-  std::auto_ptr< EcalRecHitCollection > redCollection(new EcalRecHitCollection);
+  // create a unique_ptr to a BasicClusterCollection, copy the clusters into it and put in the Event:
+  auto redCollection = std::make_unique<EcalRecHitCollection>();
 
-  for(EcalRecHitCollection::const_iterator it = hit_collection->begin(); it != hit_collection->end(); ++it) {
+  for (EcalRecHitCollection::const_iterator it = hit_collection->begin(); it != hit_collection->end(); ++it) {
     //std::cout << *it << std::endl;
-    if(it->energy() > noiseEnergyThreshold_ && it->chi2() < noiseChi2Threshold_) { 
-        nRed++;
-        redCollection->push_back( EcalRecHit(*it) );
+    if (it->energy() > noiseEnergyThreshold_ && it->chi2() < noiseChi2Threshold_) {
+      nRed++;
+      redCollection->push_back(EcalRecHit(*it));
     }
-   
   }
 
-  edm::LogInfo("")<< "total # hits: " << nTot << "  #hits with E > " << noiseEnergyThreshold_ << " GeV  and  chi2 < " <<  noiseChi2Threshold_ << " : " << nRed << std::endl;
+  edm::LogInfo("") << "total # hits: " << nTot << "  #hits with E > " << noiseEnergyThreshold_ << " GeV  and  chi2 < "
+                   << noiseChi2Threshold_ << " : " << nRed << std::endl;
 
-  evt.put(redCollection, reducedHitCollection_);
-
+  evt.put(std::move(redCollection), reducedHitCollection_);
 }

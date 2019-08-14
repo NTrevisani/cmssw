@@ -4,7 +4,7 @@
 //
 // Package:    EcalRegionCablingESProducer
 // Class:      EcalRegionCablingESProducer
-// 
+//
 /**\class EcalRegionCablingESProducer EcalRegionCablingESProducer.h EventFilter/EcalRegionCablingESProducer/src/EcalRegionCablingESProducer.cc
 
  Description: <one line class summary>
@@ -18,10 +18,8 @@
 //
 //
 
-
 // system include files
 #include <memory>
-#include "boost/shared_ptr.hpp"
 
 // user include files
 #include "FWCore/Framework/interface/ESProducer.h"
@@ -32,12 +30,13 @@
 
 class EcalRegionCablingESProducer : public edm::ESProducer {
 public:
-      EcalRegionCablingESProducer(const edm::ParameterSet&);
-  ~EcalRegionCablingESProducer();
+  EcalRegionCablingESProducer(const edm::ParameterSet&);
+  ~EcalRegionCablingESProducer() override;
 
-  typedef boost::shared_ptr<EcalRegionCabling> ReturnType;
+  typedef std::unique_ptr<EcalRegionCabling> ReturnType;
 
   ReturnType produce(const EcalRegionCablingRecord&);
+
 private:
   edm::ParameterSet conf_;
 };

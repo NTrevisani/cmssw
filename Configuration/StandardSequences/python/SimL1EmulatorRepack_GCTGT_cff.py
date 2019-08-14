@@ -1,6 +1,13 @@
 import FWCore.ParameterSet.Config as cms
 
 ## L1REPACK: redo GCT,GT, using Run-1 or Run-2 input, making Run-2 output
+
+# If the Stage 1 trigger is running, there is also some different configuration.
+# Note that this next file does nothing if the stage1L1Trigger era is not active, so
+# it is safe to import even if the Stage 1 trigger is not required. It *MUST* be
+# imported into this namespace, i.e. "from <module> import *".
+from L1Trigger.Configuration.ConditionalStage1Configuration_cff import *
+
 ##
 ## run the L1 unpackers
 ##
@@ -86,14 +93,15 @@ rawDataCollector = EventFilter.RawDataCollector.rawDataCollectorByLabel_cfi.rawD
 ## construct SimL1Emulator sequence
 ##
 
-SimL1Emulator = cms.Sequence(
-      unpackGtDigis      +
-      unpackCastorDigis  +
-      L1TCaloStage1_PPFromRaw +
-      newGtDigis         +
-      packGctDigis       +
-      packL1tDigis       +
-      packL1Gt           +
-      packL1GtEvm        +
+SimL1EmulatorTask = cms.Task(
+      unpackGtDigis      ,
+      unpackCastorDigis  ,
+      L1TCaloStage1_PPFromRawTask ,
+      newGtDigis         ,
+      packGctDigis       ,
+      packL1tDigis       ,
+      packL1Gt           ,
+      packL1GtEvm        ,
       rawDataCollector
 )
+SimL1Emulator = cms.Sequence(SimL1EmulatorTask)

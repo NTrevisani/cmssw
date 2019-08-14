@@ -15,100 +15,66 @@
 #include "DataFormats/TrackerRecHit2D/interface/BaseTrackerRecHit.h"
 #include "DataFormats/TrackingRecHit/interface/mayown_ptr.h"
 
-
+namespace edm {
+  class ParameterSetDescription;
+}
 class FreeTrajectoryState;
 
 class dso_hidden SeedFromConsecutiveHitsCreator : public SeedCreator {
 public:
-
-  SeedFromConsecutiveHitsCreator( const edm::ParameterSet & cfg)
-      : thePropagatorLabel                (cfg.getParameter<std::string>("propagator"))
-      , theBOFFMomentum                   (cfg.existsAs<double>("SeedMomentumForBOFF") ? cfg.getParameter<double>("SeedMomentumForBOFF") : 5.0)
-      , theOriginTransverseErrorMultiplier(cfg.existsAs<double>("OriginTransverseErrorMultiplier") ? cfg.getParameter<double>("OriginTransverseErrorMultiplier") : 1.0)
-      , theMinOneOverPtError              (cfg.existsAs<double>("MinOneOverPtError") ? cfg.getParameter<double>("MinOneOverPtError") : 1.0)
-      , TTRHBuilder                       (cfg.existsAs<std::string>("TTRHBuilder") ? cfg.getParameter<std::string>("TTRHBuilder") : std::string("WithTrackAngle"))
-  // 2014/02/11 mia:
-  // we should get rid of the boolean parameter useSimpleMF,
-  // and use only a string magneticField [instead of SimpleMagneticField]
-  // or better an edm::ESInputTag (at the moment HLT does not handle ESInputTag)
-      , useSimpleMF_(false)
-      , mfName_("")
-      , forceKinematicWithRegionDirection_(cfg.existsAs<bool>("forceKinematicWithRegionDirection") ? cfg.getParameter<bool>("forceKinematicWithRegionDirection") : false)
-    {
-      if (cfg.exists("SimpleMagneticField")) {
-	useSimpleMF_ = true;
-	mfName_ = cfg.getParameter<std::string>("SimpleMagneticField");
-      }
-    }
-
-  SeedFromConsecutiveHitsCreator(
-      const std::string & propagator = "PropagatorWithMaterial", double seedMomentumForBOFF = -5.0,
-      double aOriginTransverseErrorMultiplier = 1.0, double aMinOneOverPtError = 1.0, const std::string & bname="WithTrackAngle")
-      : thePropagatorLabel(propagator)
-      , theBOFFMomentum(seedMomentumForBOFF)
-      , theOriginTransverseErrorMultiplier(aOriginTransverseErrorMultiplier)
-      , theMinOneOverPtError(aMinOneOverPtError)
-      , TTRHBuilder(bname)
-      , useSimpleMF_(false)
-      , forceKinematicWithRegionDirection_(false)
-  { }
+  SeedFromConsecutiveHitsCreator(const edm::ParameterSet &cfg)
+      : thePropagatorLabel(cfg.getParameter<std::string>("propagator")),
+        theBOFFMomentum(cfg.getParameter<double>("SeedMomentumForBOFF")),
+        theOriginTransverseErrorMultiplier(cfg.getParameter<double>("OriginTransverseErrorMultiplier")),
+        theMinOneOverPtError(cfg.getParameter<double>("MinOneOverPtError")),
+        TTRHBuilder(cfg.getParameter<std::string>("TTRHBuilder")),
+        mfName_(cfg.getParameter<std::string>("magneticField")),
+        forceKinematicWithRegionDirection_(cfg.getParameter<bool>("forceKinematicWithRegionDirection")) {}
 
   //dtor
-  virtual ~SeedFromConsecutiveHitsCreator();
+  ~SeedFromConsecutiveHitsCreator() override;
+
+  static void fillDescriptions(edm::ParameterSetDescription &desc);
+  static const char *fillDescriptionsLabel() { return "ConsecutiveHits"; }
 
   // initialize the "event dependent state"
-  virtual void init(const TrackingRegion & region,
-	       const edm::EventSetup& es,
-	       const SeedComparitor *filter) GCC11_FINAL;
+  void init(const TrackingRegion &region, const edm::EventSetup &es, const SeedComparitor *filter) final;
 
   // make job
   // fill seedCollection with the "TrajectorySeed"
-  virtual void makeSeed(TrajectorySeedCollection & seedCollection,
-			const SeedingHitSet & hits) GCC11_FINAL;
-
+  void makeSeed(TrajectorySeedCollection &seedCollection, const SeedingHitSet &hits) final;
 
 private:
+  virtual bool initialKinematic(GlobalTrajectoryParameters &kine, const SeedingHitSet &hits) const;
 
-  virtual bool initialKinematic(GlobalTrajectoryParameters & kine,
-				const SeedingHitSet & hits) const;
+  bool checkHit(const TrajectoryStateOnSurface &tsos, SeedingHitSet::ConstRecHitPointer hit) const dso_hidden;
 
+  CurvilinearTrajectoryError initialError(float sin2Theta) const dso_hidden;
 
-  bool checkHit(
-      const TrajectoryStateOnSurface &tsos,
-      SeedingHitSet::ConstRecHitPointer hit) const dso_hidden;
+  void buildSeed(TrajectorySeedCollection &seedCollection,
+                 const SeedingHitSet &hits,
+                 const FreeTrajectoryState &fts) const dso_hidden;
 
-
-  CurvilinearTrajectoryError initialError(float sin2Theta) const  dso_hidden;
-
-  void buildSeed(TrajectorySeedCollection & seedCollection,
-		 const SeedingHitSet & hits,
-		 const FreeTrajectoryState & fts) const  dso_hidden;
-
-  SeedingHitSet::RecHitPointer
-  refitHit(SeedingHitSet::ConstRecHitPointer hit,
-	   const TrajectoryStateOnSurface & state) const  dso_hidden;
+  SeedingHitSet::RecHitPointer refitHit(SeedingHitSet::ConstRecHitPointer hit,
+                                        const TrajectoryStateOnSurface &state) const dso_hidden;
 
 protected:
-
   std::string thePropagatorLabel;
-  double theBOFFMomentum;
-  double theOriginTransverseErrorMultiplier;
-  double theMinOneOverPtError;
+  float theBOFFMomentum;
+  float theOriginTransverseErrorMultiplier;
+  float theMinOneOverPtError;
 
-  const TrackingRegion * region = nullptr;
+  const TrackingRegion *region = nullptr;
   const SeedComparitor *filter = nullptr;
   edm::ESHandle<TrackerGeometry> tracker;
-  edm::ESHandle<Propagator>  propagatorHandle;
+  edm::ESHandle<Propagator> propagatorHandle;
   edm::ESHandle<MagneticField> bfield;
   float nomField;
   bool isBOFF = false;
   std::string TTRHBuilder;
-  bool useSimpleMF_;
   std::string mfName_;
   bool forceKinematicWithRegionDirection_;
 
   TkClonerImpl cloner;
-
-
 };
 #endif

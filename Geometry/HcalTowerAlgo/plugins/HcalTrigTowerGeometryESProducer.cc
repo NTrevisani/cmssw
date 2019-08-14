@@ -1,36 +1,21 @@
 #include "HcalTrigTowerGeometryESProducer.h"
 #include "FWCore/Framework/interface/ModuleFactory.h"
-#include "FWCore/Framework/interface/ESHandle.h"
-#include "Geometry/Records/interface/IdealGeometryRecord.h"
+#include "Geometry/Records/interface/HcalRecNumberingRecord.h"
 #include <memory>
 
-HcalTrigTowerGeometryESProducer::HcalTrigTowerGeometryESProducer( const edm::ParameterSet & config )
-{
-  useFullGranularityHF_=config.getParameter<bool>("useFullGranularityHF");
+HcalTrigTowerGeometryESProducer::HcalTrigTowerGeometryESProducer(const edm::ParameterSet& config)
+    : topologyToken_{setWhatProduced(this).consumesFrom<HcalTopology, HcalRecNumberingRecord>(edm::ESInputTag{})} {}
 
-  setWhatProduced( this );
+HcalTrigTowerGeometryESProducer::~HcalTrigTowerGeometryESProducer(void) {}
+
+std::unique_ptr<HcalTrigTowerGeometry> HcalTrigTowerGeometryESProducer::produce(const CaloGeometryRecord& iRecord) {
+  const auto& hcalTopology = iRecord.get(topologyToken_);
+  return std::make_unique<HcalTrigTowerGeometry>(&hcalTopology);
 }
 
-HcalTrigTowerGeometryESProducer::~HcalTrigTowerGeometryESProducer( void ) 
-{}
-
-boost::shared_ptr<HcalTrigTowerGeometry>
-HcalTrigTowerGeometryESProducer::produce( const CaloGeometryRecord & iRecord )
-{
-    edm::ESHandle<HcalTopology> hcalTopology;
-    iRecord.getRecord<IdealGeometryRecord>().get( hcalTopology );
-
-    m_hcalTrigTowerGeom =
-	boost::shared_ptr<HcalTrigTowerGeometry>( new HcalTrigTowerGeometry( &*hcalTopology));
-    m_hcalTrigTowerGeom->setUpgradeConfigurationHFTowers(useFullGranularityHF_);
-
-    return m_hcalTrigTowerGeom;
+void HcalTrigTowerGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+  edm::ParameterSetDescription desc;
+  descriptions.add("HcalTrigTowerGeometryESProducer", desc);
 }
 
-void HcalTrigTowerGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions & descriptions) {
-   edm::ParameterSetDescription desc;
-   desc.add<bool>("useFullGranularityHF", false);
-   descriptions.add("HcalTrigTowerGeometryESProducer", desc);
-}
-
-DEFINE_FWK_EVENTSETUP_MODULE( HcalTrigTowerGeometryESProducer );
+DEFINE_FWK_EVENTSETUP_MODULE(HcalTrigTowerGeometryESProducer);

@@ -1,4 +1,4 @@
-#!/bin/tcsh
+#!/bin/env tcsh
 
 #Check to see if the CMS environment is set up
 if ($?CMSSW_BASE != 1) then
@@ -38,20 +38,22 @@ cp ../html_indices/TopLevelRelVal_PileUp.html index.html
 
 #TTbar
 mkdir TTbar
+mkdir TTbar/HcalDigis
 mkdir TTbar/CaloTowers
 mkdir TTbar/RecHits
 mkdir TTbar/RBX
-mkdir TTbar/HcalDigis
 
 cat ../html_indices/RelVal_RecHits.html | sed -e s/DATA_SAMPLE/TTbar/ > TTbar/RecHits/index.html
 
 cp ../html_indices/RelVal_CaloTowers.html TTbar/CaloTowers/index.html
-cp ../html_indices/RBX.html               TTbar/RBX/index.html
 cp ../html_indices/RelVal_HcalDigis.html  TTbar/HcalDigis/index.html
+cp ../html_indices/RBX.html               TTbar/RBX/index.html
+
 cd ../
 
 #Process Startup TTbar
-root -b -q 'RelValMacro.C("'${OLD_VERS}'","'${NEW_VERS}'","'HcalRecHitValidationRelVal_TTbar_${OLD_VERS}.root'","'HcalRecHitValidationRelVal_TTbar_${NEW_VERS}.root'","InputRelVal_Pileup.txt",'${harvest}')'
+#root -b -q 'RelValMacro.C("'${OLD_VERS}_Startup'","'${NEW_VERS}_Startup'","'HcalRecHitValidationRelVal_TTbar_Startup_${OLD_VERS}_PileUp.root'","'HcalRecHitValidationRelVal_TTbar_Startup_${NEW_VERS}_PileUp.root'","InputRelVal_Medium.txt",'${harvest}')'
+./RelValMacro.py ${OLD_VERS} ${NEW_VERS} HcalRecHitValidationRelVal_TTbar_${OLD_VERS}.root HcalRecHitValidationRelVal_TTbar_${NEW_VERS}.root rangeMediumPileup
 
 mv *HcalDigi*.gif   ${NEW_VERS}_vs_${OLD_VERS}_RelVal_PileUp/TTbar/HcalDigis/
 mv *CaloTowers*.gif ${NEW_VERS}_vs_${OLD_VERS}_RelVal_PileUp/TTbar/CaloTowers/

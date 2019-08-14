@@ -1,18 +1,11 @@
 #include "DataFormats/GEMRecHit/interface/GEMRecHit.h"
 #include "DataFormats/GEMRecHit/interface/GEMRecHitCollection.h"
+#include "DataFormats/GEMRecHit/interface/ME0RecHit.h"
+#include "DataFormats/GEMRecHit/interface/ME0RecHitCollection.h"
+#include "DataFormats/GEMRecHit/interface/GEMCSCSegment.h"
+#include "DataFormats/GEMRecHit/interface/GEMCSCSegmentCollection.h"
+#include "DataFormats/GEMRecHit/interface/GEMSegment.h"
+#include "DataFormats/GEMRecHit/interface/GEMSegmentCollection.h"
+#include "DataFormats/GEMRecHit/interface/ME0Segment.h"
+#include "DataFormats/GEMRecHit/interface/ME0SegmentCollection.h"
 #include "DataFormats/Common/interface/Wrapper.h"
-
-namespace DataFormats_GEMRecHit {
-  struct dictionary {
-    std::pair<unsigned int, unsigned int> dummyrpc1;
-    std::pair<unsigned long, unsigned long> dummyrpc2;
-    std::map<GEMDetId, std::pair<unsigned int, unsigned int> > dummyrpcdetid1;
-    std::map<GEMDetId, std::pair<unsigned long, unsigned long> > dummyrpcdetid2;
-
-    GEMRecHit rrh;
-    std::vector<GEMRecHit> vrh;
-    GEMRecHitCollection c;
-    edm::Wrapper<GEMRecHitCollection> w;
-  };
-}
-

@@ -1,0 +1,7 @@
+<use   name="FWCore/Framework"/>
+<use   name="FWCore/PythonParameterSet"/>
+<use   name="boost"/>
+<use   name="py2-pybind11"/>
+<export>
+  <lib   name="1"/>
+</export>

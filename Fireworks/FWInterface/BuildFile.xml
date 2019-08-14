@@ -13,6 +13,10 @@
 <lib name="Geom"/>
 <lib name="Eve"/>
 <lib name="RGL"/>
+<lib name="GuiHtml"/>
+<lib name="GX11"/>
+<use name="boost_python"/>
+<use name="FWCore/PythonParameterSet"/>
 <export>
 <lib name="1"/>
 </export>

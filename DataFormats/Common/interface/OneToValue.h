@@ -8,12 +8,13 @@
 #include <map>
 
 namespace edm {
-  template<typename CKey, typename Val, typename index = unsigned int>
+  template <typename CKey, typename Val, typename index = unsigned int>
   class OneToValue {
     /// reference to "key" collection
     typedef RefProd<CKey> KeyRefProd;
     /// internal map associated data
     typedef Val map_assoc;
+
   public:
     /// values reference collection type
     typedef Val val_type;
@@ -34,55 +35,72 @@ namespace edm {
     /// transient val vector
     typedef std::vector<Val> transient_val_vector;
     /// insert in the map
-    static void insert(ref_type& ref, map_type& m,
-                       key_type const& k, data_type const& v) {
-      if(k.isNull()) {
-        Exception::throwThis(errors::InvalidReference,
-          "can't insert null references in AssociationMap");
+    static void insert(ref_type& ref, map_type& m, key_type const& k, data_type const& v) {
+      if (k.isNull()) {
+        Exception::throwThis(errors::InvalidReference, "can't insert null references in AssociationMap");
       }
-      if(ref.key.isNull()) {
-        ref.key = KeyRefProd(k);
+      if (ref.key.isNull()) {
+        if (k.isTransient()) {
+          Exception::throwThis(errors::InvalidReference,
+                               "can't insert transient references in uninitialized AssociationMap");
+        }
+        //another thread might change the value of productGetter()
+        auto getter = ref.key.productGetter();
+        if (getter == nullptr) {
+          Exception::throwThis(errors::LogicError,
+                               "Can't insert into AssociationMap unless it was properly initialized.\n"
+                               "The most common fix for this is to add an argument to the call to the\n"
+                               "AssociationMap constructor that is a valid Handle to the container.\n"
+                               "If you don't have a valid handle or the template parameter to the\n"
+                               "AssociationMap is a View, then see the comments in AssociationMap.h.\n"
+                               "(note this was a new requirement added in the 7_5_X release series)\n");
+        }
+        ref.key = KeyRefProd(k.id(), getter);
       }
       helpers::checkRef(ref.key, k);
       index_type ik = index_type(k.key());
       m[ik] = v;
     }
     /// return values collection
-    static val_type val(ref_type const&, map_assoc const& v) {
-      return v;
-    }
+    static val_type val(ref_type const&, map_assoc const& v) { return v; }
     /// size of data_type
     static typename map_type::size_type size(map_assoc const&) { return 1; }
     /// sort
-    static void sort(map_type&) { }
+    static void sort(map_type&) {}
     /// fill transient map
     static transient_map_type transientMap(ref_type const& ref, map_type const& map) {
       transient_map_type m;
-      CKey const& ckey = *ref.key;
-      for(typename map_type::const_iterator i = map.begin(); i != map.end(); ++i) {
-        typename CKey::value_type const* k = &ckey[i->first];
-        m.insert(std::make_pair(k, i->second));
+      if (!map.empty()) {
+        CKey const& ckey = *ref.key;
+        for (typename map_type::const_iterator i = map.begin(); i != map.end(); ++i) {
+          typename CKey::value_type const* k = &ckey[i->first];
+          m.insert(std::make_pair(k, i->second));
+        }
       }
       return m;
     }
     /// fill transient key vector
     static transient_key_vector transientKeyVector(ref_type const& ref, map_type const& map) {
       transient_key_vector m;
-      CKey const& ckey = *ref.key;
-      for(typename map_type::const_iterator i = map.begin(); i != map.end(); ++i) {
-        m.push_back(& ckey[i->first]);
+      if (!map.empty()) {
+        CKey const& ckey = *ref.key;
+        for (typename map_type::const_iterator i = map.begin(); i != map.end(); ++i) {
+          m.push_back(&ckey[i->first]);
+        }
       }
       return m;
     }
     /// fill transient val vector
     static transient_val_vector transientValVector(ref_type const& ref, map_type const& map) {
       transient_val_vector m;
-      for(typename map_type::const_iterator i = map.begin(); i != map.end(); ++i) {
-        m.push_back(i->second);
+      if (!map.empty()) {
+        for (typename map_type::const_iterator i = map.begin(); i != map.end(); ++i) {
+          m.push_back(i->second);
+        }
       }
       return m;
     }
   };
-}
+}  // namespace edm
 
 #endif

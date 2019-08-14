@@ -17,30 +17,28 @@
 // Original Author:
 //         Created:  Wed Feb 10 11:15:16 CST 2010
 //
-#if !defined(__CINT__) && !defined(__MAKECINT__)
 
 #include "DataFormats/FWLite/interface/Run.h"
 #include "DataFormats/FWLite/interface/HistoryGetterBase.h"
 
 namespace fwlite {
-    class RunHistoryGetter : public HistoryGetterBase{
-        public:
-            RunHistoryGetter(const Run*);
-            virtual ~RunHistoryGetter();
+  class RunHistoryGetter : public HistoryGetterBase {
+  public:
+    RunHistoryGetter(const Run*);
+    ~RunHistoryGetter() override;
 
-            // ---------- const member functions ---------------------
-            const edm::ProcessHistory& history() const;
+    // ---------- const member functions ---------------------
+    const edm::ProcessHistory& history() const override;
 
-        private:
-            RunHistoryGetter(const RunHistoryGetter&); // stop default
+  private:
+    RunHistoryGetter(const RunHistoryGetter&) = delete;  // stop default
 
-            const RunHistoryGetter& operator=(const RunHistoryGetter&); // stop default
+    const RunHistoryGetter& operator=(const RunHistoryGetter&) = delete;  // stop default
 
-            // ---------- member data --------------------------------
-            const fwlite::Run* run_;
-    };
+    // ---------- member data --------------------------------
+    const fwlite::Run* run_;
+  };
 
-}
+}  // namespace fwlite
 
-#endif /*__CINT__ */
 #endif

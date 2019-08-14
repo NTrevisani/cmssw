@@ -4,7 +4,7 @@
 //
 // Package:     CondFormats/DataRecord
 // Class  :     HcalZDCLowGainFractionsRcd
-// 
+//
 /**\class HcalZDCLowGainFractionsRcd HcalZDCLowGainFractionsRcd.h CondFormats/DataRecord/interface/HcalZDCLowGainFractionsRcd.h
 
  Description: [one line class summary]
@@ -19,8 +19,11 @@
 //
 
 #include "FWCore/Framework/interface/DependentRecordImplementation.h"
+#include "Geometry/Records/interface/HcalRecNumberingRecord.h"
 #include "Geometry/Records/interface/IdealGeometryRecord.h"
 
-class HcalZDCLowGainFractionsRcd : public edm::eventsetup::DependentRecordImplementation<HcalZDCLowGainFractionsRcd, boost::mpl::vector<IdealGeometryRecord> > {};
+class HcalZDCLowGainFractionsRcd : public edm::eventsetup::DependentRecordImplementation<
+                                       HcalZDCLowGainFractionsRcd,
+                                       boost::mpl::vector<HcalRecNumberingRecord, IdealGeometryRecord> > {};
 
 #endif

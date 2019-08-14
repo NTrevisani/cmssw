@@ -2,21 +2,25 @@
 //
 // Package:     cmsShow36
 // Class  :     FWISpyView
-// 
+//
 // Implementation:
 //     [Notes on implementation]
 //
-// Original Author:  Alja Mrak-Tadel 
+// Original Author:  Alja Mrak-Tadel
 //         Created:  Wed Apr  7 14:40:31 CEST 2010
 //
 
 // system include files
+#include <boost/bind.hpp>
 
 // user include files
 #include "TGLViewer.h"
-
+#include "Fireworks/Core/interface/CmsShowViewPopup.h"
 #include "Fireworks/Core/interface/FWISpyView.h"
-
+#include "Fireworks/Core/interface/Context.h"
+#include "TEveBoxSet.h"
+#include "TEveScene.h"
+#include "TEveManager.h"
 
 //
 // constants, enums and typedefs
@@ -29,41 +33,16 @@
 //
 // constructors and destructor
 //
-FWISpyView::FWISpyView(TEveWindowSlot* slot, FWViewType::EType typeId):
-   FW3DViewBase(slot, typeId)
-{
-   viewerGL()->CurrentCamera().SetFixDefCenter(kTRUE);
-}
+FWISpyView::FWISpyView(TEveWindowSlot* slot, FWViewType::EType typeId, unsigned int version)
+    : FW3DViewBase(slot, typeId, version) {}
 
 // FWISpyView::FWISpyView(const FWISpyView& rhs)
 // {
 //    // do actual copying here;
 // }
 
-FWISpyView::~FWISpyView()
-{
-}
+FWISpyView::~FWISpyView() {}
 
-//
-// assignment operators
-//
-// const FWISpyView& FWISpyView::operator=(const FWISpyView& rhs)
-// {
-//   //An exception safe implementation is
-//   FWISpyView temp(rhs);
-//   swap(rhs);
-//
-//   return *this;
-// }
+void FWISpyView::setContext(const fireworks::Context& x) { FW3DViewBase::setContext(x); }
 
-//
-// member functions
-//
-
-//
-// const member functions
-//
-
-//
-// static member functions
-//
+void FWISpyView::populateController(ViewerParameterGUI& gui) const { FW3DViewBase::populateController(gui); }

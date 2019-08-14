@@ -71,7 +71,13 @@
   <use name="FWCore/PluginManager"/>
   <use name="DataFormats/Provenance"/>
   <use name="DataFormats/Luminosity"/>
+  <use name="Utilities/Xerces"/>
   <use name="xerces-c"/>
+  <flags EDM_PLUGIN="1"/>
+</library>
+<library file="BunchSpacingProducer.cc" name="BunchSpacingProducer">
+  <use name="FWCore/PluginManager"/>
+  <use name="DataFormats/Provenance"/>
   <flags EDM_PLUGIN="1"/>
 </library>
 <library file="ExpressLumiProducer.cc" name="ExpressLumiProducer">
@@ -84,12 +90,14 @@
 <library file="DIPLumiProducer.cc" name="DIPLumiProducer">
   <use name="RecoLuminosity/LumiProducer"/>
   <use name="FWCore/PluginManager"/>
+  <use name="Utilities/Xerces"/>
   <use name="xerces-c"/>
   <flags EDM_PLUGIN="1"/>
 </library>
 <library file="LumiCorrectionSource.cc" name="LumiCorrectionSource">
   <use name="RecoLuminosity/LumiProducer"/>
   <use name="FWCore/PluginManager"/>
+  <use name="Utilities/Xerces"/>
   <use name="xerces-c"/>
   <flags EDM_PLUGIN="1"/>
 </library>

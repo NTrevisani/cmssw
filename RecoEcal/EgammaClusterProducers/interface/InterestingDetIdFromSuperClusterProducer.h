@@ -5,7 +5,7 @@
 //
 // Package:    InterestingDetIdFromSuperClusterProducer
 // Class:      InterestingDetIdFromSuperClusterProducer
-// 
+//
 /**\class InterestingDetIdFromSuperClusterProducer 
 Adapted from InterestingDetIdCollectionProducer by J.Bendavid
  
@@ -24,14 +24,12 @@ The following classes of "interesting id" are considered
     4. Channels next to the EB/EE transition if keepNextToBoundary_ is true
 */
 
-
-
 // system include files
 #include <memory>
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
@@ -44,28 +42,27 @@ The following classes of "interesting id" are considered
 class CaloTopology;
 class EcalSeverityLevelAlgo;
 
-class InterestingDetIdFromSuperClusterProducer : public edm::EDProducer {
-   public:
-      //! ctor
-      explicit InterestingDetIdFromSuperClusterProducer(const edm::ParameterSet&);
-      virtual void beginRun (edm::Run const&, const edm::EventSetup&) override final;
-      //! producer
-      virtual void produce(edm::Event &, const edm::EventSetup&);
+class InterestingDetIdFromSuperClusterProducer : public edm::stream::EDProducer<> {
+public:
+  //! ctor
+  explicit InterestingDetIdFromSuperClusterProducer(const edm::ParameterSet&);
+  void beginRun(edm::Run const&, const edm::EventSetup&) final;
+  //! producer
+  void produce(edm::Event&, const edm::EventSetup&) override;
 
-   private:
-      // ----------member data ---------------------------
-      edm::EDGetTokenT<EcalRecHitCollection>         recHitsToken_;
-      edm::EDGetTokenT<reco::SuperClusterCollection> superClustersToken_;
-      std::string interestingDetIdCollection_;
-      int minimalEtaSize_;
-      int minimalPhiSize_;
-      const CaloTopology* caloTopology_;
+private:
+  // ----------member data ---------------------------
+  edm::EDGetTokenT<EcalRecHitCollection> recHitsToken_;
+  edm::EDGetTokenT<reco::SuperClusterCollection> superClustersToken_;
+  std::string interestingDetIdCollection_;
+  int minimalEtaSize_;
+  int minimalPhiSize_;
+  const CaloTopology* caloTopology_;
 
-      int severityLevel_;
-      const EcalSeverityLevelAlgo * severity_;
-      bool  keepNextToDead_;
-      bool  keepNextToBoundary_;
-
+  int severityLevel_;
+  const EcalSeverityLevelAlgo* severity_;
+  bool keepNextToDead_;
+  bool keepNextToBoundary_;
 };
 
 #endif

@@ -23,15 +23,14 @@ namespace l1t {
 
   class Stage1Layer2EtSumAlgorithm {
   public:
-    virtual void processEvent(const std::vector<l1t::CaloRegion> & regions,
-			      const std::vector<l1t::CaloEmCand> & EMCands,
-			      std::vector<l1t::EtSum> * sums) = 0;
+    virtual void processEvent(const std::vector<l1t::CaloRegion>& regions,
+                              const std::vector<l1t::CaloEmCand>& EMCands,
+                              const std::vector<l1t::Jet>* jets,
+                              std::vector<l1t::EtSum>* sums) = 0;
 
     virtual ~Stage1Layer2EtSumAlgorithm(){};
-    std::string regionPUSType;
-    std::vector<double> regionPUSParams;
   };
 
-}
+}  // namespace l1t
 
 #endif

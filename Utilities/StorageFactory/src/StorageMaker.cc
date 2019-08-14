@@ -3,30 +3,12 @@
 #include "Utilities/StorageFactory/interface/IOFlags.h"
 #include <cstdlib>
 
-StorageMaker::StorageMaker (void)
-{}
+void StorageMaker::stagein(const std::string & /*proto*/, const std::string & /*path*/, const AuxSettings &) const {}
 
-StorageMaker::~StorageMaker (void)
-{}
-
-void
-StorageMaker::stagein (const std::string &/*proto*/,
-                       const std::string &/*path*/)
-{}
-
-void
-StorageMaker::setTimeout (unsigned int /*timeout*/)
-{}
-
-void
-StorageMaker::setDebugLevel (unsigned int /*level*/)
-{}
-
-bool
-StorageMaker::check (const std::string &proto,
-		     const std::string &path,
-		     IOOffset *size /* = 0 */)
-{
+bool StorageMaker::check(const std::string &proto,
+                         const std::string &path,
+                         const AuxSettings &aux,
+                         IOOffset *size /* = 0 */) const {
   // Fallback method is to open the file and check its
   // size.  Because grid jobs run in a directory where
   // there is usually more space than in /tmp, and that
@@ -36,13 +18,11 @@ StorageMaker::check (const std::string &proto,
   // destructor or close method.
   bool found = false;
   int mode = IOFlags::OpenRead | IOFlags::OpenUnbuffered;
-  if (Storage *s = open (proto, path, mode))
-  {
+  if (auto s = open(proto, path, mode, aux)) {
     if (size)
-      *size = s->size ();
+      *size = s->size();
 
-    s->close ();
-    delete s;
+    s->close();
 
     found = true;
   }

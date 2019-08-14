@@ -10,6 +10,7 @@ This code began life in COMP/CRAB/python/LumiList.py
 """
 
 
+from builtins import range
 import copy
 import json
 import re
@@ -62,7 +63,7 @@ class LumiList(object):
             runsAndLumis = {}
             for (run, lumi) in lumis:
                 run = str(run)
-                if not runsAndLumis.has_key(run):
+                if run not in runsAndLumis:
                     runsAndLumis[run] = []
                 runsAndLumis[run].append(lumi)
 
@@ -101,6 +102,17 @@ class LumiList(object):
                 if compactList[run]:
                     self.compactList[runString] = compactList[run]
 
+        # Compact each run and make it unique
+
+        for run in self.compactList.keys():
+            newLumis = []
+            for lumi in sorted(self.compactList[run]):
+                # If the next lumi starts inside or just after the last just change the endpoint of the first
+                if newLumis and newLumis[-1][0] <= lumi[0] <= newLumis[-1][1] + 1:
+                    newLumis[-1][1] = max(newLumis[-1][1], lumi[1])
+                else:
+                    newLumis.append(lumi)
+            self.compactList[run] = newLumis
 
     def __sub__(self, other): # Things from self not in other
         result = {}
@@ -150,7 +162,7 @@ class LumiList(object):
 
 
             if lumiList:
-                unique = [lumiList[0]]
+                unique = [copy.deepcopy(lumiList[0])]
             for pair in lumiList[1:]:
                 if pair[0] == unique[-1][1]+1:
                     unique[-1][1] = copy.deepcopy(pair[1])
@@ -168,7 +180,7 @@ class LumiList(object):
         runs = set(aruns + bruns)
         for run in runs:
             overlap = sorted(self.compactList.get(run, []) + other.compactList.get(run, []))
-            unique = [overlap[0]]
+            unique = [copy.deepcopy(overlap[0])]
             for pair in overlap[1:]:
                 if pair[0] >= unique[-1][0] and pair[0] <= unique[-1][1]+1 and pair[1] > unique[-1][1]:
                     unique[-1][1] = copy.deepcopy(pair[1])
@@ -258,10 +270,10 @@ class LumiList(object):
             lumis = self.compactList[run]
             for lumiPair in sorted(lumis):
                 if lumiPair[0] == lumiPair[1]:
-                    parts.append("%s:%s" % (run, lumiPair[0]))
+                    parts.append(str("%s:%s" % (run, lumiPair[0])))
                 else:
-                    parts.append("%s:%s-%s:%s" %
-                                 (run, lumiPair[0], run, lumiPair[1]))
+                    parts.append(str("%s:%s-%s:%s" %
+                                 (run, lumiPair[0], run, lumiPair[1])))
         return parts
 
 
@@ -304,7 +316,7 @@ class LumiList(object):
         '''
         for run in runList:
             run = str(run)
-            if self.compactList.has_key (run):
+            if run in self.compactList:
                 del self.compactList[run]
 
         return
@@ -335,13 +347,13 @@ class LumiList(object):
         if lumiSection is None:
             # if this is an integer or a string, see if the run exists
             if isinstance (run, int) or isinstance (run, str):
-                return self.compactList.has_key( str(run) )
+                return str(run) in self.compactList
             # if we're here, then run better be a tuple or list
             try:
                 lumiSection = run[1]
                 run         = run[0]
             except:
-                raise RuntimeError, "Improper format for run '%s'" % run
+                raise RuntimeError("Improper format for run '%s'" % run)
         lumiRangeList = self.compactList.get( str(run) )
         if not lumiRangeList:
             # the run isn't there, so no need to look any further

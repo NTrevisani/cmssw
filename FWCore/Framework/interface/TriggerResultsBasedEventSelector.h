@@ -13,102 +13,60 @@
 #include <vector>
 #include <map>
 
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "FWCore/Framework/interface/EventPrincipal.h"
 #include "FWCore/Framework/interface/EventSelector.h"
 #include "DataFormats/Common/interface/Handle.h"
+#include "FWCore/Utilities/interface/EDGetToken.h"
 #include "FWCore/Utilities/interface/InputTag.h"
 
-namespace edm
-{
-  class ModuleCallingContext;
+namespace edm {
+  class EventForOutput;
+  class TriggerResults;
 
-  namespace detail
-  {
+  namespace detail {
     typedef edm::Handle<edm::TriggerResults> handle_t;
 
-    class NamedEventSelector
-    {
+    class NamedEventSelector {
     public:
-      NamedEventSelector(std::string const& n, EventSelector const& s) :
-	inputTag_("TriggerResults", "", n), 
-	eventSelector_(s), 
-	product_() 
-      { }
+      NamedEventSelector(std::string const& n, EventSelector const& s, ConsumesCollector&& iC)
+          : inputTag_("TriggerResults", "", n), token_(iC.consumes<TriggerResults>(inputTag_)), eventSelector_(s) {}
 
-      void fill(EventPrincipal const& e, ModuleCallingContext const* mcc);
+      bool match(TriggerResults const& product) { return eventSelector_.acceptEvent(product); }
 
-      bool match()
-      {
-	return eventSelector_.acceptEvent(*product_);
-      }
+      InputTag const& inputTag() const { return inputTag_; }
 
-      handle_t product() const
-      {
-	return product_;
-      }
+      EDGetTokenT<TriggerResults> const& token() const { return token_; }
 
-      void clear()
-      {
-	product_ = handle_t();
-      }
-      
     private:
-      InputTag            inputTag_;
-      EventSelector       eventSelector_;
-      handle_t            product_;
+      InputTag inputTag_;
+      EDGetTokenT<TriggerResults> token_;
+      EventSelector eventSelector_;
     };
 
-    class TriggerResultsBasedEventSelector
-    {
+    class TriggerResultsBasedEventSelector {
     public:
       TriggerResultsBasedEventSelector();
-      typedef detail::handle_t                    handle_t;
-      typedef std::vector<NamedEventSelector>     selectors_t;
-      typedef selectors_t::size_type              size_type;
+      typedef detail::handle_t handle_t;
+      typedef std::vector<NamedEventSelector> selectors_t;
       typedef std::pair<std::string, std::string> parsed_path_spec_t;
 
-      void setupDefault(std::vector<std::string> const& triggernames);
-      
+      void setupDefault();
+
       void setup(std::vector<parsed_path_spec_t> const& path_specs,
-		 std::vector<std::string> const& triggernames,
-                 const std::string& process_name);
+                 std::vector<std::string> const& triggernames,
+                 std::string const& process_name,
+                 ConsumesCollector&& iC);
 
-      bool wantEvent(EventPrincipal const& e, ModuleCallingContext const*);
+      bool wantEvent(EventForOutput const& e);
 
-      handle_t getOneTriggerResults(EventPrincipal const& e, ModuleCallingContext const*);
-
-      // Clear the cache
-      void clear();
+      unsigned int numberOfTokens() const { return selectors_.size(); }
+      EDGetToken token(unsigned int index) const { return selectors_[index].token(); }
 
     private:
-      typedef selectors_t::iterator iter;
-
-      // Get all TriggerResults objects for the process names we're
-      // interested in.
-      size_type fill(EventPrincipal const& ev, ModuleCallingContext const*);
-      
-      // If we have only one handle cached, return it; otherwise throw.
-      handle_t returnOneHandleOrThrow();
-
-
-      bool        fillDone_;
-      size_type   numberFound_;
       selectors_t selectors_;
+      bool wantAllEvents_;
     };
-    
-    class  TRBESSentry {
-    public:
-      TRBESSentry(detail::TriggerResultsBasedEventSelector& prods) : p(prods) {}
-      ~TRBESSentry() {
-        p.clear();
-      }
-    private:
-      detail::TriggerResultsBasedEventSelector& p;
-      
-      TRBESSentry(TRBESSentry const&) = delete;
-      TRBESSentry& operator=(TRBESSentry const&) = delete;
-    };
-
 
     /** Handles the final initialization of the TriggerResutsBasedEventSelector
      \return true if all events will be selected
@@ -116,16 +74,18 @@ namespace edm
     bool configureEventSelector(edm::ParameterSet const& iPSet,
                                 std::string const& iProcessName,
                                 std::vector<std::string> const& iAllTriggerNames,
-                                edm::detail::TriggerResultsBasedEventSelector& oSelector);
+                                edm::detail::TriggerResultsBasedEventSelector& oSelector,
+                                ConsumesCollector&& iC);
     /** Takes the user specified SelectEvents PSet and creates a new one
      which conforms to the canonical format required for provenance
      */
-    ParameterSetID registerProperSelectionInfo(edm::ParameterSet const& iInitial,
-                                               std::string const& iLabel,
-                                               std::map<std::string, std::vector<std::pair<std::string, int> > > const& outputModulePathPositions,
-                                               bool anyProductProduced);
+    ParameterSetID registerProperSelectionInfo(
+        edm::ParameterSet const& iInitial,
+        std::string const& iLabel,
+        std::map<std::string, std::vector<std::pair<std::string, int> > > const& outputModulePathPositions,
+        bool anyProductProduced);
 
-  }
-}
+  }  // namespace detail
+}  // namespace edm
 
 #endif

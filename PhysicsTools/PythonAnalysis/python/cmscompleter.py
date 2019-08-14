@@ -5,11 +5,13 @@ Please read license in your lcg external python version
 benedikt.hegner@cern.ch
 
 """
+from __future__ import absolute_import
+from __future__ import print_function
 # TODO: sometimes results are doubled. clean global_matches list!
 
 import readline
 import rlcompleter
-import __builtin__
+from six import builtins
 import __main__
 
 __all__ = ["CMSCompleter"]
@@ -18,7 +20,7 @@ class CMSCompleter(rlcompleter.Completer):
     def __init__(self, namespace = None):
 	
         if namespace and not isinstance(namespace, dict):
-            raise TypeError,'namespace must be a dictionary'
+            raise TypeError('namespace must be a dictionary')
 
         # Don't bind to namespace quite yet, but flag whether the user wants a
         # specific namespace or to use __main__.__dict__. This will allow us
@@ -30,10 +32,10 @@ class CMSCompleter(rlcompleter.Completer):
             self.namespace = namespace		
         try:
             # loading cms namespace
-            import namespaceDict
+            from . import namespaceDict
             self.cmsnamespace = namespaceDict.getNamespaceDict()
         except:
-            print 'Could not load CMS namespace'
+            print('Could not load CMS namespace')
 
  
     def global_matches(self, text):
@@ -47,7 +49,7 @@ class CMSCompleter(rlcompleter.Completer):
         matches = []
         n = len(text)
         for list in [keyword.kwlist,
-                     __builtin__.__dict__,
+                     builtins.__dict__,
 					 self.cmsnamespace]:
             for word in list:
                 if word[:n] == text and word != "__builtins__":
