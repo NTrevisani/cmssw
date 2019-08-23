@@ -27,11 +27,31 @@ siPixelPhase1OfflineDQM_source = cms.Sequence(SiPixelPhase1RawDataAnalyzer
                                             + SiPixelPhase1DigisAnalyzer
                                             + SiPixelPhase1DeadFEDChannelsAnalyzer
                                             + SiPixelPhase1ClustersAnalyzer
+                                            + SiPixelPhase1ClustersAnalyzer
                                             + SiPixelPhase1RecHitsAnalyzer
                                             + SiPixelPhase1TrackResidualsAnalyzer
                                             + SiPixelPhase1TrackClustersAnalyzer
                                             + SiPixelPhase1TrackEfficiencyAnalyzer
-                                            )
+                                            + SiPixelPhase1RawDataAnalyzerMB
+                                            + SiPixelPhase1DigisAnalyzerMB
+                                            + SiPixelPhase1DeadFEDChannelsAnalyzerMB
+                                            + SiPixelPhase1ClustersAnalyzerMB
+                                            + SiPixelPhase1RecHitsAnalyzerMB
+                                            + SiPixelPhase1TrackResidualsAnalyzerMB
+                                            + SiPixelPhase1TrackClustersAnalyzerMB
+                                            + SiPixelPhase1TrackEfficiencyAnalyzerMB)
+
+# # Minimum bias config
+
+# siPixelPhase1OfflineDQM_source_MB = cms.Sequence(SiPixelPhase1RawDataAnalyzerMB
+#                                             + SiPixelPhase1DigisAnalyzerMB
+#                                             + SiPixelPhase1DeadFEDChannelsAnalyzerMB
+#                                             + SiPixelPhase1ClustersAnalyzerMB
+#                                             + SiPixelPhase1RecHitsAnalyzerMB
+#                                             + SiPixelPhase1TrackResidualsAnalyzerMB
+#                                             + SiPixelPhase1TrackClustersAnalyzerMB
+#                                             + SiPixelPhase1TrackEfficiencyAnalyzerMB
+#                                             )
 
 
 #Cosmics config

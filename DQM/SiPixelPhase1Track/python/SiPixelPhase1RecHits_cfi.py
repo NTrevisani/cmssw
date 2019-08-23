@@ -224,6 +224,14 @@ SiPixelPhase1RecHitsAnalyzer = DQMEDAnalyzer('SiPixelPhase1RecHits',
         triggerflags = trigger.SiPixelPhase1Triggers
 )
 
+SiPixelPhase1RecHitsAnalyzerMB = SiPixelPhase1RecHitsAnalyzer.clone(
+    triggerflags = trigger.SiPixelPhase1TriggersMB
+)
+for entry in SiPixelPhase1RecHitsAnalyzerMB.histograms:
+    if hasattr(entry,"topFolderName"):
+        setattr(entry,"topFolderName","PixelPhase1/MinimumBias/Phase1_Tracks")
+
+
 SiPixelPhase1RecHitsHarvester = DQMEDHarvester("SiPixelPhase1Harvester",
         histograms = SiPixelPhase1RecHitsConf,
         geometry = SiPixelPhase1Geometry

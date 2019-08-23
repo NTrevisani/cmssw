@@ -88,6 +88,14 @@ SiPixelPhase1RawDataAnalyzer = DQMEDAnalyzer('SiPixelPhase1RawData',
         triggerflags = trigger.SiPixelPhase1Triggers
 )
 
+SiPixelPhase1RawDataAnalyzerMB = SiPixelPhase1RawDataAnalyzer.clone(
+    triggerflags = trigger.SiPixelPhase1TriggersMB
+)
+for entry in SiPixelPhase1RawDataAnalyzerMB.histograms:
+    if hasattr(entry,"topFolderName"):
+        setattr(entry,"topFolderName","PixelPhase1/MinimumBias/Phase1_MechanicalView")
+
+
 SiPixelPhase1RawDataHarvester = DQMEDHarvester("SiPixelPhase1Harvester",
         histograms = SiPixelPhase1RawDataConf,
         geometry = SiPixelPhase1Geometry

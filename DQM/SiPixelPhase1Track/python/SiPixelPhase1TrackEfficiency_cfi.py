@@ -141,6 +141,14 @@ SiPixelPhase1TrackEfficiencyAnalyzer = DQMEDAnalyzer('SiPixelPhase1TrackEfficien
         triggerflags = trigger.SiPixelPhase1Triggers
 )
 
+SiPixelPhase1TrackEfficiencyAnalyzerMB = SiPixelPhase1TrackEfficiencyAnalyzer.clone(
+    triggerflags = trigger.SiPixelPhase1TriggersMB
+)
+for entry in SiPixelPhase1TrackEfficiencyAnalyzerMB.histograms:
+    if hasattr(entry,"topFolderName"):
+        setattr(entry,"topFolderName","PixelPhase1/MinimumBias/Phase1_Tracks")
+
+
 SiPixelPhase1TrackEfficiencyHarvester = DQMEDHarvester("SiPixelPhase1Harvester",
         histograms = SiPixelPhase1TrackEfficiencyConf,
         geometry = SiPixelPhase1Geometry

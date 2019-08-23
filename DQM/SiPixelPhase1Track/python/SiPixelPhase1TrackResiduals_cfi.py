@@ -96,6 +96,14 @@ SiPixelPhase1TrackResidualsAnalyzer = DQMEDAnalyzer('SiPixelPhase1TrackResiduals
         triggerflags = trigger.SiPixelPhase1Triggers
 )
 
+SiPixelPhase1TrackResidualsAnalyzerMB = SiPixelPhase1TrackResidualsAnalyzer.clone(
+    triggerflags = trigger.SiPixelPhase1TriggersMB
+)
+for entry in SiPixelPhase1TrackResidualsAnalyzerMB.histograms:
+    if hasattr(entry,"topFolderName"):
+        setattr(entry,"topFolderName","PixelPhase1/MinimumBias/Phase1_Tracks")
+
+
 SiPixelPhase1TrackResidualsHarvester = DQMEDHarvester("SiPixelPhase1Harvester",
         histograms = SiPixelPhase1TrackResidualsConf,
         geometry = SiPixelPhase1Geometry

@@ -35,3 +35,7 @@ PixelDCSfilter = cms.PSet(
 SiPixelPhase1Triggers = cms.untracked.VPSet(
     PixelDCSfilter
 )
+
+SiPixelPhase1TriggersMB = cms.untracked.VPSet(
+    genericTriggerEventFlag4HLTdb
+)

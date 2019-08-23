@@ -294,6 +294,14 @@ SiPixelPhase1ClustersAnalyzer = DQMEDAnalyzer('SiPixelPhase1Clusters',
         triggerflags = trigger.SiPixelPhase1Triggers
 )
 
+SiPixelPhase1ClustersAnalyzerMB = SiPixelPhase1ClustersAnalyzer.clone(
+    triggerflags = trigger.SiPixelPhase1TriggersMB
+)
+for entry in SiPixelPhase1ClustersAnalyzerMB.histograms:
+    if hasattr(entry,"topFolderName"):
+        setattr(entry,"topFolderName","PixelPhase1/MinimumBias/Phase1_MechanicalView")
+
+
 SiPixelPhase1ClustersHarvester = DQMEDHarvester("SiPixelPhase1Harvester",
         histograms = SiPixelPhase1ClustersConf,
         geometry = SiPixelPhase1Geometry

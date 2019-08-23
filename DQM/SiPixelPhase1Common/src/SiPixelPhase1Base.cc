@@ -18,6 +18,7 @@ SiPixelPhase1Base::SiPixelPhase1Base(const edm::ParameterSet& iConfig)
 
   for (auto& flag : flags) {
     triggerlist.emplace_back(new GenericTriggerEventFlag(flag, consumesCollector(), *this));
+    std::cout<<flag<<std::endl;
   }
 }
 

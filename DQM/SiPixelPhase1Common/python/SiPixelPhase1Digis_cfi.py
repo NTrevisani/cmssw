@@ -197,6 +197,14 @@ SiPixelPhase1DigisAnalyzer = DQMEDAnalyzer('SiPixelPhase1Digis',
         triggerflags = trigger.SiPixelPhase1Triggers
 )
 
+SiPixelPhase1DigisAnalyzerMB = SiPixelPhase1DigisAnalyzer.clone(
+    triggerflags = trigger.SiPixelPhase1TriggersMB
+)
+for entry in SiPixelPhase1DigisAnalyzerMB.histograms:
+    if hasattr(entry,"topFolderName"):
+        setattr(entry,"topFolderName","PixelPhase1/MinimumBias/Phase1_MechanicalView")
+
+
 SiPixelPhase1DigisHarvester = DQMEDHarvester("SiPixelPhase1Harvester",
         histograms = SiPixelPhase1DigisConf,
         geometry = SiPixelPhase1Geometry

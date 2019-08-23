@@ -114,6 +114,14 @@ SiPixelPhase1DeadFEDChannelsAnalyzer = DQMEDAnalyzer('SiPixelPhase1DeadFEDChanne
         triggerflags = trigger.SiPixelPhase1Triggers
 )
 
+SiPixelPhase1DeadFEDChannelsAnalyzerMB = SiPixelPhase1DeadFEDChannelsAnalyzer.clone(
+    triggerflags = trigger.SiPixelPhase1TriggersMB
+)
+for entry in SiPixelPhase1DeadFEDChannelsAnalyzerMB.histograms:
+    if hasattr(entry,"topFolderName"):
+        setattr(entry,"topFolderName","PixelPhase1/MinimumBias")
+
+
 SiPixelPhase1DeadFEDChannelsHarvester = DQMEDHarvester("SiPixelPhase1Harvester",
         histograms = SiPixelPhase1DeadFEDChannelsConf,
         geometry = SiPixelPhase1Geometry
